@@ -76,7 +76,7 @@ class Authentication(
         if (token == null || token.isExpired()) {
             mutex.withLock {
                 token = _token.get()
-                if (token == null || token!!.isExpired()) {
+                if (token == null || token.isExpired()) {
                     val newToken = scope.async { fetchNewToken() }.await()
                     if (newToken != null) {
                         _token.set(newToken)
@@ -109,7 +109,7 @@ class Authentication(
             try {
                 val response = client.newCall(request).execute()
                 if (response.isSuccessful) {
-                    val body = response.body?.string() ?: return@withContext null
+                    val body = response.body.string()
                     val decodedResponse = json.decodeFromString<OsuClientCredentialsGrantResponse>(body)
                     val newToken =
                         AccessToken(

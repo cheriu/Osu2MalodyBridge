@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 import net.omastore.malodystore.util.osuApiV2.BeatmapsetsSearchParameters
 import net.omastore.malodystore.util.osuApiV2.BeatmapsetsSearchParameters.Mode
 import net.omastore.malodystore.util.osuApiV2.BeatmapsetsSearchResponse
-import net.omastore.malodystore.util.osuApiV2.SearchOptions
 
 /**
  * @param word Search keyword

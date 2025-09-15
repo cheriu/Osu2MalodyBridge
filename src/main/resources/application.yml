@@ -8,13 +8,7 @@ malody:
     # 欢迎词
     welcome: Welcome to this osu! to MalodyV server
     # 缓存路径，推荐设置绝对路径
-    tmp: "/tmp"
-    # 是否保留osz文件缓存
-    saveTemp: true
-    # 本服务端的完整URL(也就是malody连接用的地址)
-    url: http://localhost:8081
-    # 是否将所有谱面全部设置为stable
-    showAll: false
+    tmp: "/tmp/Osu2Malody"
   osu:
     clientID: 
-    clientSecret: 
+    clientSecret:

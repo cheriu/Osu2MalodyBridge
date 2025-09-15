@@ -3,7 +3,7 @@ package net.omastore.malodystore.service
 import net.omastore.malodystore.model.ServerInfoResponse
 
 /**
- * see definition at https://gitlab.com/mugzone_team/malody_store_api/-/blob/main/README.md]
+ * see definition at https://gitlab.com/mugzone_team/malody_store_api/-/blob/main/README.md
  */
 
 interface BasicInformation {

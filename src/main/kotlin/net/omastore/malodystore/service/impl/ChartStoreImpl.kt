@@ -75,32 +75,18 @@ class ChartStoreImpl(
     }
 
     override fun promote(parameters: ChartStorePromoteQueryParameters): PagedResponse<Song> {
-        if (parameters.from == 0) { // first time query for this parameters
-            val beatmapSetsSearchResponse =
-                osuApiV2
-                    .beatmapsetsSearch(
-                        parameters.toBeatmapsetsSearchParameters(),
-                    )?.also { response ->
-                        chartStorePromoteCursorCache.putCursor(parameters.toNextListQueryParameters(response), response.cursor_string ?: "")
-                    }
-            return beatmapSetsSearchResponse?.toPagedResponseSong(from = parameters.from, org = parameters.org)
-                ?: PagedResponse<Song>(hasMore = false, next = 0, data = emptyList(), code = -1).also {
-                    logger.error("List: Error while getting beatmapsets search")
+        val beatmapSetsSearchResponse =
+            osuApiV2
+                .beatmapsetsSearch(
+                    parameters.toBeatmapsetsSearchParameters(),
+                    cursorString = chartStorePromoteCursorCache.getCursor(parameters),
+                )?.also { response ->
+                    chartStorePromoteCursorCache.putCursor(parameters.toNextListQueryParameters(response), response.cursor_string ?: "")
                 }
-        } else {
-            val beatmapsetsSearchResponse =
-                osuApiV2
-                    .beatmapsetsSearch(
-                        parameters.toBeatmapsetsSearchParameters(),
-                        cursorString = chartStorePromoteCursorCache.getCursor(parameters),
-                    )?.also { response ->
-                        chartStorePromoteCursorCache.putCursor(parameters.toNextListQueryParameters(response), response.cursor_string ?: "")
-                    }
-            return beatmapsetsSearchResponse?.toPagedResponseSong(from = parameters.from, org = parameters.org)
-                ?: PagedResponse<Song>(hasMore = false, next = 0, data = emptyList(), code = -1).also {
-                    logger.error("List: Error while getting beatmapsets search")
-                }
-        }
+        return beatmapSetsSearchResponse?.toPagedResponseSong(from = parameters.from, org = parameters.org)
+            ?: PagedResponse<Song>(hasMore = false, next = 0, data = emptyList(), code = -1).also {
+                logger.error("List: Error while getting beatmapsets search")
+            }
     }
 
     private fun Beatmapset.toPagedResponseChart(): PagedResponse<Chart> =

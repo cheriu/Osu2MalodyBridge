@@ -75,7 +75,7 @@ class OsuApiV2Impl(
 
             val response = client.newCall(request).execute()
             if (response.isSuccessful) {
-                val body = response.body?.string() ?: return null
+                val body = response.body.string()
                 logger.trace("Response body: $body")
                 return json.decodeFromString<BeatmapsetsSearchResponse>(body)
             } else {
@@ -114,7 +114,7 @@ class OsuApiV2Impl(
 
             val response = client.newCall(request).execute()
             if (response.isSuccessful) {
-                val body = response.body?.string() ?: return null
+                val body = response.body.string()
                 return json.decodeFromString<Beatmapset>(body)
             } else {
                 logger.error("failed to get beatmapset")
@@ -152,7 +152,7 @@ class OsuApiV2Impl(
 
             val response = client.newCall(request).execute()
             if (response.isSuccessful) {
-                val body = response.body?.string() ?: return null
+                val body = response.body.string()
                 return json.decodeFromString<Beatmap>(body)
             } else {
                 logger.error("failed to get beatmap")

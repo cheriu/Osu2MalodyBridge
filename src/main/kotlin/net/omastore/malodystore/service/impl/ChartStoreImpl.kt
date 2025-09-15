@@ -142,7 +142,7 @@ class ChartStoreImpl(
         return beatmapset?.toPagedResponseChart()
             ?: PagedResponse<Chart>(hasMore = false, next = 0, data = emptyList(), code = -1)
                 .also {
-                    logger.error("No beatmapset found")
+                    logger.error("No beatmapset found for sid: $sid")
                 }
     }
 
@@ -433,7 +433,7 @@ private fun Beatmap.toMalodyChart(): Chart =
         cid = this.id,
         uid = this.user_id,
         creator = this.user_id.toString(), // TODO()
-        version = "${this.version} Lv.${floor(this.difficulty_rating + 0.5).toInt()}",
+        version = "${this.version} R.${this.difficulty_rating}",
         level = floor(this.difficulty_rating + 0.5).toInt(),
         length = this.total_length,
         type = 1,

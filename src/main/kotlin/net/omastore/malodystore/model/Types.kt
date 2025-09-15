@@ -74,6 +74,7 @@ fun ChartStorePromoteQueryParameters.toBeatmapsetsSearchParameters(): Beatmapset
     BeatmapsetsSearchParameters(
         keywords = "",
         general = BeatmapsetsSearchParameters.General.FEATURED_ARTISTS,
+        mode = BeatmapsetsSearchParameters.Mode.OSU_MANIA, // TODO: support other mode (no plan)
     )
 
 fun ChartStorePromoteQueryParameters.toNextListQueryParameters(

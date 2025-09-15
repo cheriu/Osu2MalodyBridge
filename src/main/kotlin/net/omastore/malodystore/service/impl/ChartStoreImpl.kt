@@ -17,6 +17,8 @@ import net.omastore.malodystore.model.toBeatmapsetsSearchParameters
 import net.omastore.malodystore.model.toNextListQueryParameters
 import net.omastore.malodystore.service.ChartStore
 import net.omastore.malodystore.service.DownloadService
+import net.omastore.malodystore.service.getBeatmapFromCacheOrRemote
+import net.omastore.malodystore.util.BeatmapId2BeatmapCache
 import net.omastore.malodystore.util.ChartStoreListCursorCache
 import net.omastore.malodystore.util.ChartStorePromoteCursorCache
 import net.omastore.malodystore.util.osuApiV2.Beatmap
@@ -46,15 +48,13 @@ class ChartStoreImpl(
     osuAuthSecret: OsuAuthSecret,
     private val chartStoreListCursorCache: ChartStoreListCursorCache,
     private val chartStorePromoteCursorCache: ChartStorePromoteCursorCache,
+    private val beatmapId2BeatmapCache: BeatmapId2BeatmapCache,
 ) : ChartStore {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val osuApiV2 = OsuApiV2Impl(osuAuthSecret.clientId, osuAuthSecret.clientSecret)
 
     @Autowired
     private lateinit var downloadService: DownloadService
-
-    @Value("\${malody.server.url}")
-    private var serverUrl: String = ""
 
     @Value("\${malody.server.tmp}")
     private var tmpDir: String = "/tmp"
@@ -151,7 +151,7 @@ class ChartStoreImpl(
         request: HttpServletRequest,
     ): DownloadResponse {
         val beatmap =
-            osuApiV2.getBeatmap(beatmapId = cid) ?: return DownloadResponse(
+            getBeatmapFromCacheOrRemote(beatmapId = cid, osuApiV2 = osuApiV2, cache = beatmapId2BeatmapCache) ?: return DownloadResponse(
                 cid = cid,
                 items = emptyList(),
                 code = -2,
@@ -220,7 +220,7 @@ class ChartStoreImpl(
 
             return listOf(
                 DownloadItem(
-                    name = "${beatmap.version} Lv.${floor(beatmap.difficulty_rating + 0.5)}.osu",
+                    name = "${beatmap.version} R.${beatmap.difficulty_rating}.osu",
                     hash = beatmap.checksum,
                     file = "$baseUrl/${beatmap.id}?type=chart",
                 ),
@@ -245,7 +245,7 @@ class ChartStoreImpl(
         type: String,
         response: HttpServletResponse,
     ) {
-        osuApiV2.getBeatmap(beatmapId = cid)?.let { beatmap ->
+        getBeatmapFromCacheOrRemote(beatmapId = cid, osuApiV2 = osuApiV2, cache = beatmapId2BeatmapCache)?.let { beatmap ->
             val oszFilePath = "$tmpDir/${beatmap.beatmapset_id}n.osz"
             val oszFile = File(oszFilePath)
 
@@ -318,7 +318,7 @@ class ChartStoreImpl(
                             val bg =
                                 entries
                                     .asSequence()
-                                    .filter { it.name == background }
+                                    .filter { it.name.equals(background, ignoreCase = true) }
                                     .toList()
                             when (bg.size) {
                                 0 -> {
@@ -345,10 +345,6 @@ class ChartStoreImpl(
         }
     }
 }
-
-private fun String.basename(): String = this.substringBeforeLast(".", this)
-
-private fun String.basenameLower() = basename().lowercase()
 
 private fun getDecompressedChart(
     zip: ZipFile,
@@ -386,14 +382,11 @@ private fun getZipEntryMD5(
     zipFile: File,
     targetFilename: String,
 ): String? {
-    val targetBase = targetFilename.basenameLower()
     FileInputStream(zipFile).use { fileInputStream ->
         ZipArchiveInputStream(fileInputStream, "UTF-8", false, true).use { zis ->
             var entry: ZipArchiveEntry? = zis.nextEntry
             while (entry != null) {
-                val entryName = entry.name
-                val entryBase = entryName.basenameLower()
-                if (entryBase == targetBase && !entry.isDirectory) {
+                if (entry.name.equals(targetFilename, ignoreCase = true) && !entry.isDirectory) {
                     return calculateMD5(zis)
                 }
                 entry = zis.nextEntry

@@ -26,6 +26,19 @@ data class ChartStoreListQueryParameters(
     val from: Int = 0,
 )
 
+enum class MalodyMode(
+    val value: Int,
+) {
+    ANY(-1),
+    KEY(0),
+    CATCH(3),
+    PAD(4),
+    TAIKO(5),
+    RING(6),
+    SLIDE(7),
+    LIVE(8),
+}
+
 fun ChartStoreListQueryParameters.toBeatmapsetsSearchParameters(): BeatmapsetsSearchParameters =
     BeatmapsetsSearchParameters(
         keywords = this.word,

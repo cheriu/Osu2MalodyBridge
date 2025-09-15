@@ -10,6 +10,7 @@ import net.omastore.malodystore.model.ChartStoreListQueryParameters
 import net.omastore.malodystore.model.ChartStorePromoteQueryParameters
 import net.omastore.malodystore.model.DownloadItem
 import net.omastore.malodystore.model.DownloadResponse
+import net.omastore.malodystore.model.MalodyMode
 import net.omastore.malodystore.model.PagedResponse
 import net.omastore.malodystore.model.Song
 import net.omastore.malodystore.model.toBeatmapsetsSearchParameters
@@ -59,32 +60,18 @@ class ChartStoreImpl(
     private var tmpDir: String = "/tmp"
 
     override fun list(parameters: ChartStoreListQueryParameters): PagedResponse<Song> {
-        if (parameters.from == 0) { // first time query for this parameters
-            val beatmapSetsSearchResponse =
-                osuApiV2
-                    .beatmapsetsSearch(
-                        parameters.toBeatmapsetsSearchParameters(),
-                    )?.also { response ->
-                        chartStoreListCursorCache.putCursor(parameters.toNextListQueryParameters(response), response.cursor_string ?: "")
-                    }
-            return beatmapSetsSearchResponse?.toPagedResponseSong(from = parameters.from)
-                ?: PagedResponse<Song>(hasMore = false, next = 0, data = emptyList(), code = -1).also {
-                    logger.error("List: Error while getting beatmapsets search")
+        val beatmapSetsSearchResponse =
+            osuApiV2
+                .beatmapsetsSearch(
+                    parameters.toBeatmapsetsSearchParameters(),
+                    cursorString = chartStoreListCursorCache.getCursor(parameters),
+                )?.also { response ->
+                    chartStoreListCursorCache.putCursor(parameters.toNextListQueryParameters(response), response.cursor_string ?: "")
                 }
-        } else {
-            val beatmapsetsSearchResponse =
-                osuApiV2
-                    .beatmapsetsSearch(
-                        parameters.toBeatmapsetsSearchParameters(),
-                        cursorString = chartStoreListCursorCache.getCursor(parameters),
-                    )?.also { response ->
-                        chartStoreListCursorCache.putCursor(parameters.toNextListQueryParameters(response), response.cursor_string ?: "")
-                    }
-            return beatmapsetsSearchResponse?.toPagedResponseSong(from = parameters.from)
-                ?: PagedResponse<Song>(hasMore = false, next = 0, data = emptyList(), code = -1).also {
-                    logger.error("List: Error while getting beatmapsets search")
-                }
-        }
+        return beatmapSetsSearchResponse?.toPagedResponseSong(from = parameters.from, org = parameters.org)
+            ?: PagedResponse<Song>(hasMore = false, next = 0, data = emptyList(), code = -1).also {
+                logger.error("List: Error while getting beatmapsets search for $parameters")
+            }
     }
 
     override fun promote(parameters: ChartStorePromoteQueryParameters): PagedResponse<Song> {
@@ -96,7 +83,7 @@ class ChartStoreImpl(
                     )?.also { response ->
                         chartStorePromoteCursorCache.putCursor(parameters.toNextListQueryParameters(response), response.cursor_string ?: "")
                     }
-            return beatmapSetsSearchResponse?.toPagedResponseSong(from = parameters.from)
+            return beatmapSetsSearchResponse?.toPagedResponseSong(from = parameters.from, org = parameters.org)
                 ?: PagedResponse<Song>(hasMore = false, next = 0, data = emptyList(), code = -1).also {
                     logger.error("List: Error while getting beatmapsets search")
                 }
@@ -109,7 +96,7 @@ class ChartStoreImpl(
                     )?.also { response ->
                         chartStorePromoteCursorCache.putCursor(parameters.toNextListQueryParameters(response), response.cursor_string ?: "")
                     }
-            return beatmapsetsSearchResponse?.toPagedResponseSong(from = parameters.from)
+            return beatmapsetsSearchResponse?.toPagedResponseSong(from = parameters.from, org = parameters.org)
                 ?: PagedResponse<Song>(hasMore = false, next = 0, data = emptyList(), code = -1).also {
                     logger.error("List: Error while getting beatmapsets search")
                 }
@@ -127,17 +114,20 @@ class ChartStoreImpl(
             code = -1,
         )
 
-    private fun BeatmapsetsSearchResponse.toPagedResponseSong(from: Int): PagedResponse<Song> {
+    private fun BeatmapsetsSearchResponse.toPagedResponseSong(
+        from: Int,
+        org: Int,
+    ): PagedResponse<Song> {
         return if (this.total == 0) { // no available song
             PagedResponse<Song>(hasMore = false, next = 0, data = emptyList(), code = 1)
         } else {
             return if (this.cursor_string == null) { // no more song
                 PagedResponse<Song>(
                     hasMore = false,
-                    next = from,
+                    next = from + this.beatmapsets.size,
                     data =
                         this.beatmapsets.map {
-                            it.toMalodySong()
+                            it.toMalodySong(org)
                         },
                     code = 0,
                 )
@@ -148,7 +138,7 @@ class ChartStoreImpl(
                     next = from + this.beatmapsets.size,
                     data =
                         this.beatmapsets.map {
-                            it.toMalodySong()
+                            it.toMalodySong(org)
                         },
                 )
             }
@@ -438,15 +428,15 @@ private fun calculateMD5(inputStream: InputStream): String {
     return hashBytes.joinToString(separator = "") { "%02x".format(it) }
 }
 
-private fun Beatmapset.toMalodySong(): Song =
+private fun Beatmapset.toMalodySong(org: Int): Song =
     Song(
         sid = this.id,
         cover = this.covers.list2x,
         length = this.getLength(),
         bpm = this.bpm,
-        title = this.title,
+        title = if (org == 0) this.title else this.titleUnicode,
         artist = this.artist,
-        mode = 0,
+        mode = MalodyMode.KEY.value,
         time = Instant.parse(this.last_updated).epochSecond,
     )
 

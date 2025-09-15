@@ -6,6 +6,7 @@ import net.omastore.malodystore.model.Chart
 import net.omastore.malodystore.model.ChartStoreListQueryParameters
 import net.omastore.malodystore.model.ChartStorePromoteQueryParameters
 import net.omastore.malodystore.model.DownloadResponse
+import net.omastore.malodystore.model.MalodyMode
 import net.omastore.malodystore.model.PagedResponse
 import net.omastore.malodystore.model.Song
 import net.omastore.malodystore.service.BasicInformation
@@ -40,26 +41,12 @@ class StoreController(
         @RequestParam(name = "beta", defaultValue = "0") beta: Int,
         @RequestParam(name = "from", defaultValue = "0") from: Int,
     ): PagedResponse<Song> {
-//        if (org != 0) {
-//            TODO("org is not default")
-//        }
-//        if (mode != -1) {
-//            TODO("mode is not default")
-//        }
-//        if (lvge != 0) {
-//            TODO("lvge is not default")
-//        }
-//        if (lvle != 0) {
-//            TODO("lvle is not default")
-//        }
-//        if (beta != 0) {
-//            TODO("beta is not default")
-//        }
-//        if (from != 0) {
-//            TODO("from is not default")
-//        }
-        return chartStore.list(ChartStoreListQueryParameters(word, org, mode, lvge, lvle, beta, from)).also {
-            logger.info("${ChartStoreListQueryParameters(word, org, mode, lvge, lvle, beta, from)}")
+        if (mode == MalodyMode.ANY.value || mode == MalodyMode.KEY.value) {
+            return chartStore.list(ChartStoreListQueryParameters(word, org, mode, lvge, lvle, beta, from)).also {
+                logger.info("${ChartStoreListQueryParameters(word, org, mode, lvge, lvle, beta, from)}")
+            }
+        } else {
+            TODO("other mode is not implemented yet")
         }
     }
 

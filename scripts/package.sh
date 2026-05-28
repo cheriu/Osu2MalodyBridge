@@ -46,5 +46,11 @@ exec bin/MalodyStore "$@"
 SCRIPT
 chmod +x "build/dist/$APP_NAME/start.sh"
 
+echo "=== Step 6: Create archive ==="
+ARCHIVE="${APP_NAME}-linux-x64.zip"
+cd build/dist
+zip -r "$ARCHIVE" "$APP_NAME"/
+echo "  $ARCHIVE"
+
 echo "=== Done: build/dist/$APP_NAME/ ==="
-ls -lh "build/dist/$APP_NAME/start.sh" "build/dist/$APP_NAME/bin/"
+ls -lh "build/dist/$APP_NAME/start.sh" "build/dist/$APP_NAME/bin/" "$ARCHIVE"

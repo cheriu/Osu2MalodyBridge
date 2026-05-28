@@ -57,7 +57,14 @@ Write-Host "=== Step 5: Generate launcher scripts ==="
 "%~dp0$AppName.exe" %*
 "@ | Out-File -Encoding ASCII "$appDir\start.bat"
 
+Write-Host "=== Step 6: Create archive ==="
+$archiveName = "${AppName}-windows-x64.zip"
+Push-Location $distDir
+Compress-Archive -Path $AppName -DestinationPath $archiveName
+Write-Host "  $archiveName"
+Pop-Location
+
 Write-Host "=== Done: $appDir ==="
 Get-ChildItem "$appDir\start.bat"
 Get-ChildItem "$appDir\$AppName.exe" -ErrorAction SilentlyContinue
-Get-ChildItem "$appDir" -Directory
+Get-ChildItem "$distDir\$archiveName"

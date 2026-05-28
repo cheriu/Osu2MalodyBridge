@@ -53,26 +53,11 @@ jobs:
         env:
           PKG_VERSION: ${{ steps.version.outputs.pkg }}
 
-      - name: Create archive
-        id: archive
-        shell: bash
-        run: |
-          case "${{ runner.os }}" in
-            Linux)  OS_NAME="linux" ;;
-            Windows) OS_NAME="windows" ;;
-            *)      OS_NAME="unknown" ;;
-          esac
-          ARCHIVE="MalodyStore-${OS_NAME}-x64.zip"
-          cd build/dist
-          zip -r "$ARCHIVE" MalodyStore/
-          echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
-          echo "  Created: $ARCHIVE"
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: MalodyStore-${{ runner.os }}-${{ runner.arch }}
-          path: build/dist/${{ steps.archive.outputs.archive }}
+          path: build/dist/MalodyStore-*-x64.zip
 
   release:
     needs: package

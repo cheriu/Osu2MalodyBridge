@@ -42,6 +42,7 @@ jpackage `
   --main-class org.springframework.boot.loader.launch.JarLauncher `
   --dest "$distDir" `
   --runtime-image "$jlinkDir" `
+  --win-console `
   --java-options "-Dfile.encoding=UTF-8" `
   --java-options "-Dspring.config.additional-location=optional:file:./,optional:file:./config/"
 if ($LASTEXITCODE -ne 0) { throw "jpackage failed" }

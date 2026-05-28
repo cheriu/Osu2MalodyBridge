@@ -1,4 +1,4 @@
-name: Build and Package
+name: Build and Release
 
 on:
   push:
@@ -31,14 +31,11 @@ jobs:
         id: version
         shell: bash
         run: |
-          # Read version from build.gradle.kts as fallback
           RAW=$(grep '^version =' build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             RAW="${GITHUB_REF#refs/tags/v}"
           fi
-          # Strip -SNAPSHOT suffix (Windows jpackage requires plain digit versions)
           PKG_VER="${RAW%%-*}"
-          echo "raw=$RAW" >> $GITHUB_OUTPUT
           echo "pkg=$PKG_VER" >> $GITHUB_OUTPUT
           echo "version: $RAW (package: $PKG_VER)"
 
@@ -56,8 +53,41 @@ jobs:
         env:
           PKG_VERSION: ${{ steps.version.outputs.pkg }}
 
+      - name: Create archive
+        id: archive
+        shell: bash
+        run: |
+          case "${{ runner.os }}" in
+            Linux)  OS_NAME="linux" ;;
+            Windows) OS_NAME="windows" ;;
+            *)      OS_NAME="unknown" ;;
+          esac
+          ARCHIVE="MalodyStore-${OS_NAME}-x64.zip"
+          cd build/dist
+          zip -r "$ARCHIVE" MalodyStore/
+          echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
+          echo "  Created: $ARCHIVE"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: MalodyStore-${{ runner.os }}-${{ runner.arch }}
-          path: build/dist/MalodyStore/
+          path: build/dist/${{ steps.archive.outputs.archive }}
+
+  release:
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: artifacts/**/*.zip

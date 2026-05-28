@@ -6,7 +6,7 @@ set -euo pipefail
 
 APP_NAME="${APP_NAME:-MalodyStore}"
 APP_VERSION="${APP_VERSION:-0.0.1}"
-JAVA_MODULES="java.base,java.compiler,java.desktop,java.instrument,java.logging,java.management,java.naming,java.net.http,java.security.jgss,java.sql,java.xml,jdk.unsupported,jdk.zipfs"
+JAVA_MODULES="java.base,java.compiler,java.desktop,java.instrument,java.logging,java.management,java.naming,java.net.http,java.security.jgss,java.sql,java.xml,jdk.crypto.ec,jdk.unsupported,jdk.zipfs"
 
 echo "=== Step 1: Build bootJar ==="
 ./gradlew bootJar --no-daemon -q

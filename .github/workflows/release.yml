@@ -1,0 +1,88 @@
+name: Build and Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            suffix: linux-x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            suffix: windows-x86_64
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          VER=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VER="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "ver=$VER" >> $GITHUB_OUTPUT
+          echo "version: $VER"
+
+      - name: Build release
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          mkdir -p dist/osu2malody-store
+          cp target/${{ matrix.target }}/release/osu2malody-store dist/osu2malody-store/
+          cp application.yml dist/osu2malody-store/
+          cd dist && zip -r "osu2malody-store-${{ steps.version.outputs.ver }}-${{ matrix.suffix }}.zip" osu2malody-store/
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/osu2malody-store
+          Copy-Item target/${{ matrix.target }}/release/osu2malody-store.exe dist/osu2malody-store/
+          Copy-Item application.yml dist/osu2malody-store/
+          Compress-Archive -Path dist/osu2malody-store/* -DestinationPath "dist/osu2malody-store-${{ steps.version.outputs.ver }}-${{ matrix.suffix }}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: osu2malody-store-${{ matrix.suffix }}
+          path: dist/osu2malody-store-*.zip
+
+  release:
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: artifacts/**/*.zip

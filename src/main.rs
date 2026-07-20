@@ -22,11 +22,12 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::load()?;
     info!("Config loaded");
 
-    let osu = rosu_v2::Osu::new(
-        config.malody.osu.client_id.expect("validated"),
-        config.malody.osu.client_secret.clone().expect("validated"),
-    )
-    .await?;
+    let osu = rosu_v2::Osu::builder()
+        .client_id(config.malody.osu.client_id.expect("validated"))
+        .client_secret(config.malody.osu.client_secret.clone().expect("validated"))
+        .ratelimit(5)
+        .build()
+        .await?;
     info!("osu! API v2 client initialized");
 
     let state = Arc::new(AppState::new(config.clone(), osu));

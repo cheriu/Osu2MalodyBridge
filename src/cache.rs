@@ -23,8 +23,8 @@ pub struct BeatmapCacheEntry {
 impl BeatmapCache {
     pub fn new() -> Self {
         let cache = Cache::builder()
-            .max_capacity(1000)
-            .time_to_live(Duration::from_secs(30 * 60))
+            .max_capacity(2000)
+            .time_to_live(Duration::from_secs(60 * 60))
             .build();
         Self { cache }
     }
@@ -91,7 +91,7 @@ pub struct ListSearchCache {
 
 impl ListSearchCache {
     pub fn new() -> Self {
-        Self { cache: SearchCache::new(10_000) }
+        Self { cache: SearchCache::new(2000) }
     }
 
     pub fn get(&self, params: &ListQueryParams) -> Option<BeatmapsetSearchResult> {
@@ -110,7 +110,7 @@ pub struct PromoteSearchCache {
 
 impl PromoteSearchCache {
     pub fn new() -> Self {
-        Self { cache: SearchCache::new(10_000) }
+        Self { cache: SearchCache::new(2000) }
     }
 
     pub fn get(&self, params: &PromoteQueryParams) -> Option<BeatmapsetSearchResult> {

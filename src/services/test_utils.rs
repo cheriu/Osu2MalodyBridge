@@ -52,6 +52,7 @@ pub async fn live_state() -> Option<AppState> {
     let osu = rosu_v2::Osu::builder()
         .client_id(client_id)
         .client_secret(client_secret)
+        .ratelimit(5)
         .build()
         .await
         .ok()?;

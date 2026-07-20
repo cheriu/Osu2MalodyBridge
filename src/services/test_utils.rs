@@ -40,14 +40,14 @@ pub fn dummy_state_with_config(config: Config) -> AppState {
 }
 
 /// Build an AppState with a live osu! API client.
-/// Set `CLIENT_ID` and `CLIENT_SECRET` env vars (matching rosu-v2 convention).
+/// Set `OSU_CLIENT_ID` and `OSU_CLIENT_SECRET` env vars (matching server config).
 /// Returns `None` if credentials are not set or client creation fails.
 pub async fn live_state() -> Option<AppState> {
     // rustls 0.23: install crypto provider before Osu client uses HTTPS.
     let _ = rustls::crypto::ring::default_provider().install_default();
 
-    let client_id: u64 = std::env::var("CLIENT_ID").ok()?.parse().ok()?;
-    let client_secret = std::env::var("CLIENT_SECRET").ok()?;
+    let client_id: u64 = std::env::var("OSU_CLIENT_ID").ok()?.parse().ok()?;
+    let client_secret = std::env::var("OSU_CLIENT_SECRET").ok()?;
 
     let osu = rosu_v2::Osu::builder()
         .client_id(client_id)

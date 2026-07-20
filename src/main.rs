@@ -23,8 +23,8 @@ async fn main() -> anyhow::Result<()> {
     info!("Config loaded");
 
     let osu = rosu_v2::Osu::new(
-        config.malody.osu.client_id,
-        config.malody.osu.client_secret.clone(),
+        config.malody.osu.client_id.expect("validated"),
+        config.malody.osu.client_secret.clone().expect("validated"),
     )
     .await?;
     info!("osu! API v2 client initialized");
@@ -32,12 +32,6 @@ async fn main() -> anyhow::Result<()> {
     let state = Arc::new(AppState::new(config.clone(), osu));
     let app = create_router(state);
 
-    // Display address: bracket IPv6, no bracket for IPv4
-    let display_addr = if config.server.bind_address.contains(':') {
-        format!("[{}]:{}", config.server.bind_address, config.server.port)
-    } else {
-        format!("{}:{}", config.server.bind_address, config.server.port)
-    };
     // Raw bind address for socket: bracket IPv6 (e.g. "[::]:8080"), no bracket for IPv4
     let bind_addr = if config.server.bind_address.contains(':') {
         format!("[{}]:{}", config.server.bind_address, config.server.port)
@@ -47,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
 
     match (&config.server.tls_cert, &config.server.tls_key) {
         (Some(cert), Some(key)) => {
-            info!("Starting HTTPS server on {}", display_addr);
+            info!("Starting HTTPS server on {}", bind_addr);
             let tls_config =
                 axum_server::tls_rustls::RustlsConfig::from_pem_file(cert, key).await?;
             axum_server::bind_rustls(bind_addr.parse()?, tls_config)
@@ -55,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
                 .await?;
         }
         _ => {
-            info!("Starting HTTP server on {}", display_addr);
+            info!("Starting HTTP server on {}", bind_addr);
             let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
             axum::serve(listener, app).await?;
         }

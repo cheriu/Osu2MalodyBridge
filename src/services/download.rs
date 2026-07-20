@@ -9,7 +9,7 @@ use tracing::info;
 use zip::ZipArchive;
 
 use super::AppState;
-use super::{API_BASE_PATH, DOWNLOAD_BASE};
+use super::API_BASE_PATH;
 use crate::cache::BeatmapCacheEntry;
 use crate::models::*;
 use crate::osu_parser;
@@ -232,7 +232,7 @@ pub(super) async fn do_send_resource(
 // ---------------------------------------------------------------------------
 
 pub(super) async fn download_osz(state: &AppState, mapset_id: u32, osz_path: &Path) -> anyhow::Result<()> {
-    let url = format!("{}/{}n", DOWNLOAD_BASE, mapset_id);
+    let url = state.config.malody.server.mirror.url_for(mapset_id);
     info!("Downloading .osz from {}", url);
 
     let response = state.http_client.get(&url).send().await?;

@@ -151,7 +151,6 @@ fn verify_uid_signature(pubkey: &RsaPublicKey, uid: i32, key: &str) -> bool {
 }
 
 const API_BASE_PATH: &str = "api/store";
-const DOWNLOAD_BASE: &str = "https://mirror.hinamizawa.ai/api/v1/hinai/d";
 
 // ---------------------------------------------------------------------------
 // Public API

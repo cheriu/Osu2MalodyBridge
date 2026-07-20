@@ -64,8 +64,9 @@ malody:
     api: 202310                     # server API version
     min: 202310                     # min client API version
     welcome: "Welcome!"             # welcome message
-    tmp: /tmp/Osu2Malody            # .osz cache directory
+    tmp: ./Osu2Malody               # .osz cache directory
     # verify_client_auth: false     # verify client uid/key signature
+    mirror: hinamizawa              # beatmap mirror: `hinamizawa` (default), `catboy`, `osudirect`
   osu:
     clientID:                       # osu! OAuth Client ID
     clientSecret:                   # osu! OAuth Client Secret

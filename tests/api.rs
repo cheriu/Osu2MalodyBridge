@@ -178,13 +178,13 @@ malody:
 }
 
 // ---------------------------------------------------------------------------
-// Live tests — require CLIENT_ID and CLIENT_SECRET env vars (or .env file)
-// Uses the same env var names as rosu-v2's own tests.
-// Run with: CLIENT_ID=xxx CLIENT_SECRET=xxx cargo test -- --ignored
+// Live tests — require OSU_CLIENT_ID and OSU_CLIENT_SECRET env vars
+// Same env vars as the server config (application.yml / Config::load).
+// Run with: OSU_CLIENT_ID=xxx OSU_CLIENT_SECRET=xxx cargo test -- --ignored
 // ---------------------------------------------------------------------------
 
 #[tokio::test]
-#[ignore = "requires CLIENT_ID and CLIENT_SECRET env vars"]
+#[ignore = "requires OSU_CLIENT_ID and OSU_CLIENT_SECRET env vars"]
 async fn live_search_beatmaps_returns_results() {
     let state = match test_utils::live_state().await {
         Some(s) => Arc::new(s),
@@ -216,7 +216,7 @@ async fn live_search_beatmaps_returns_results() {
 }
 
 #[tokio::test]
-#[ignore = "requires CLIENT_ID and CLIENT_SECRET env vars"]
+#[ignore = "requires OSU_CLIENT_ID and OSU_CLIENT_SECRET env vars"]
 async fn live_promote_returns_spotlighted_maps() {
     let state = match test_utils::live_state().await {
         Some(s) => Arc::new(s),
@@ -244,7 +244,7 @@ async fn live_promote_returns_spotlighted_maps() {
 }
 
 #[tokio::test]
-#[ignore = "requires CLIENT_ID and CLIENT_SECRET env vars"]
+#[ignore = "requires OSU_CLIENT_ID and OSU_CLIENT_SECRET env vars"]
 async fn live_charts_returns_beatmap_difficulties() {
     let state = match test_utils::live_state().await {
         Some(s) => Arc::new(s),
@@ -277,7 +277,7 @@ async fn live_charts_returns_beatmap_difficulties() {
 }
 
 #[tokio::test]
-#[ignore = "requires CLIENT_ID and CLIENT_SECRET env vars"]
+#[ignore = "requires OSU_CLIENT_ID and OSU_CLIENT_SECRET env vars"]
 async fn live_download_returns_items_for_valid_beatmap() {
     let state = match test_utils::live_state().await {
         Some(s) => Arc::new(s),
@@ -347,7 +347,7 @@ async fn live_download_returns_items_for_valid_beatmap() {
 }
 
 #[tokio::test]
-#[ignore = "requires CLIENT_ID and CLIENT_SECRET env vars"]
+#[ignore = "requires OSU_CLIENT_ID and OSU_CLIENT_SECRET env vars"]
 async fn live_list_pagination_works() {
     let state = match test_utils::live_state().await {
         Some(s) => Arc::new(s),

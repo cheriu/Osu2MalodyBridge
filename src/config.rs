@@ -41,14 +41,41 @@ pub struct MalodyServerConfig {
     /// When true, reject requests missing valid uid/key/api parameters.
     #[serde(default)]
     pub verify_client_auth: bool,
+    /// Beatmap download mirror.
+    #[serde(default)]
+    pub mirror: DownloadMirror,
 }
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct OsuConfig {
     #[serde(rename = "clientID", default)]
-    pub client_id: u64,
+    pub client_id: Option<u64>,
     #[serde(rename = "clientSecret", default)]
-    pub client_secret: String,
+    pub client_secret: Option<String>,
+}
+
+/// Beatmap download mirror.
+#[derive(Deserialize, Clone, Debug, Default)]
+pub enum DownloadMirror {
+    #[serde(rename = "hinamizawa")]
+    #[default]
+    Hinamizawa,
+    #[serde(rename = "catboy")]
+    Catboy,
+    #[serde(rename = "osudirect")]
+    OsuDirect,
+}
+
+impl DownloadMirror {
+    pub fn url_for(&self, mapset_id: u32) -> String {
+        match self {
+            Self::Hinamizawa => {
+                format!("https://mirror.hinamizawa.ai/api/v1/hinai/d/{mapset_id}n")
+            }
+            Self::Catboy => format!("https://catboy.best/d/{mapset_id}n"),
+            Self::OsuDirect => format!("https://osu.direct/api/d/{mapset_id}?noVideo=true"),
+        }
+    }
 }
 
 fn default_port() -> u16 {
@@ -93,12 +120,12 @@ impl Config {
                 .context("SERVER_PORT must be a valid u16")?;
         }
         if let Ok(client_id) = std::env::var("OSU_CLIENT_ID") {
-            config.malody.osu.client_id = client_id
+            config.malody.osu.client_id = Some(client_id
                 .parse()
-                .context("OSU_CLIENT_ID must be a valid u64")?;
+                .context("OSU_CLIENT_ID must be a valid u64")?);
         }
         if let Ok(client_secret) = std::env::var("OSU_CLIENT_SECRET") {
-            config.malody.osu.client_secret = client_secret;
+            config.malody.osu.client_secret = Some(client_secret);
         }
 
         config.validate()?;
@@ -107,13 +134,13 @@ impl Config {
 
     /// Validate the loaded configuration.
     fn validate(&self) -> Result<()> {
-        if self.malody.osu.client_id == 0 {
+        if self.malody.osu.client_id.unwrap_or(0) == 0 {
             anyhow::bail!(
                 "osu! client ID is not set. Set malody.osu.clientID in {} or OSU_CLIENT_ID env var.",
                 std::env::var("CONFIG_PATH").unwrap_or_else(|_| "application.yml".to_string())
             );
         }
-        if self.malody.osu.client_secret.is_empty() {
+        if self.malody.osu.client_secret.as_deref().unwrap_or("").is_empty() {
             anyhow::bail!(
                 "osu! client secret is not set. Set malody.osu.clientSecret in {} or OSU_CLIENT_SECRET env var.",
                 std::env::var("CONFIG_PATH").unwrap_or_else(|_| "application.yml".to_string())

@@ -73,7 +73,7 @@ malody:
 
 ### HTTPS
 
-Set both `tls_cert` and `tls_key` to enable HTTPS. When behind a reverse proxy, keep HTTP and set the `X-Forwarded-Proto` header.
+Set both `tls_cert` and `tls_key` to enable HTTPS.
 
 ### Client Auth
 
@@ -89,7 +89,7 @@ Pre-built packages for Linux (x86_64) and Windows (x86_64).
 
 ```bash
 git clone https://github.com/cheriu/Osu2MalodyBridge.git
-cd Osu2MalodyBridge/o2m-rust
+cd Osu2MalodyBridge/
 cargo build --release
 # binary at: target/release/osu2malody-store
 ```

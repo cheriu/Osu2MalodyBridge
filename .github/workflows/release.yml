@@ -19,9 +19,9 @@ jobs:
             suffix: linux-x86_64
             cross: false
           - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
+            target: aarch64-linux-android
             suffix: linux-aarch64
-            cross: true
+            ndk: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             suffix: windows-x86_64
@@ -37,11 +37,17 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Install cross
-        if: matrix.cross
-        uses: taiki-e/install-action@v2
+      - name: Setup Android NDK
+        if: matrix.ndk
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
         with:
-          tool: cross
+          ndk-version: r27c
+          add-to-path: false
+
+      - name: Install cargo-ndk
+        if: matrix.ndk
+        run: cargo install cargo-ndk
 
       - name: Determine version
         id: version
@@ -55,12 +61,14 @@ jobs:
           echo "version: $VER"
 
       - name: Build release
-        if: ${{ !matrix.cross }}
+        if: matrix.ndk != true
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Build release (cross)
-        if: matrix.cross
-        run: cross build --release --target ${{ matrix.target }}
+      - name: Build release (Android NDK)
+        if: matrix.ndk
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: cargo ndk --target aarch64-linux-android --platform 24 build --release
 
       - name: Package (Linux)
         if: runner.os == 'Linux'

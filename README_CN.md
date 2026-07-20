@@ -73,7 +73,7 @@ malody:
 
 ### HTTPS
 
-同时设置 `server.tls_cert` 和 `server.tls_key` 即可启用 HTTPS。使用反向代理（nginx、Caddy）时保持 HTTP 并设置 `X-Forwarded-Proto` 头即可。
+同时设置 `server.tls_cert` 和 `server.tls_key` 即可启用 HTTPS。
 
 ### 客户端验证
 
@@ -89,7 +89,7 @@ malody:
 
 ```bash
 git clone https://github.com/cheriu/Osu2MalodyBridge.git
-cd Osu2MalodyBridge/o2m-rust
+cd Osu2MalodyBridge/
 cargo build --release
 # 二进制位于: target/release/osu2malody-store
 ```

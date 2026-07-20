@@ -17,19 +17,31 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             suffix: linux-x86_64
+            cross: false
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            suffix: linux-aarch64
+            cross: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             suffix: windows-x86_64
+            cross: false
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@v2
+
+      - name: Install cross
+        if: matrix.cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
 
       - name: Determine version
         id: version
@@ -43,7 +55,12 @@ jobs:
           echo "version: $VER"
 
       - name: Build release
+        if: ${{ !matrix.cross }}
         run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build release (cross)
+        if: matrix.cross
+        run: cross build --release --target ${{ matrix.target }}
 
       - name: Package (Linux)
         if: runner.os == 'Linux'
@@ -64,7 +81,7 @@ jobs:
           Compress-Archive -Path dist/osu2malody-store/* -DestinationPath "dist/osu2malody-store-${{ steps.version.outputs.ver }}-${{ matrix.suffix }}.zip"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: osu2malody-store-${{ matrix.suffix }}
           path: dist/osu2malody-store-*.zip
@@ -76,12 +93,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           path: artifacts
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}

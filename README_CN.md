@@ -54,19 +54,19 @@
 
 ```yaml
 server:
-  port: 8081                        # listen port
-  # bind_address: "::"              # bind address, defaults to dual-stack
-  # tls_cert: /path/to/cert.pem     # TLS certificate
-  # tls_key: /path/to/key.pem       # TLS private key
+  port: 8081                        # 监听端口
+  host: 192.168.1.1                 # 下载谱面资源公开域名
+  # tls_cert: /path/to/cert.pem     # HTTPS 证书
+  # tls_key: /path/to/key.pem       # HTTPS 密钥
 
 malody:
   server:
-    api: 202310                     # server API version
-    min: 202310                     # min client API version
-    welcome: "Welcome!"             # welcome message
-    tmp: ./Osu2Malody               # .osz cache directory
-    # verify_client_auth: false     # verify client uid/key signature
-    mirror: hinamizawa              # beatmap mirror: `hinamizawa` (default), `catboy`, `osudirect`
+    api: 202310                     # 服务器 API 版本
+    min: 202310                     # 最低客户端 API 版本
+    welcome: "Welcome!"             # 欢迎语
+    tmp: /tmp/Osu2Malody            # .osz 缓存目录
+    # verify_client_auth: false     # 是否验证客户端 uid/key 签名
+    # mirror: hinamizawa            # 下载镜像: hinamizawa, catboy, osudirect
   osu:
     clientID:                       # osu! OAuth Client ID
     clientSecret:                   # osu! OAuth Client Secret

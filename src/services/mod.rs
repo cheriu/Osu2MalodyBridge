@@ -1,4 +1,3 @@
-use axum::http::HeaderMap;
 use base64::Engine;
 use reqwest::Client as HttpClient;
 use rosu_v2::Osu;
@@ -225,7 +224,6 @@ pub async fn charts_list(state: &AppState, sid: i32) -> PagedResponse<Chart> {
 pub async fn download_chart(
     state: &AppState,
     cid: i32,
-    headers: &HeaderMap,
 ) -> DownloadResponse {
     let beatmap_entry = match download::get_beatmap_entry(state, cid as u32).await {
         Ok(entry) => entry,
@@ -242,7 +240,7 @@ pub async fn download_chart(
 
     let mapset_id = beatmap_entry.mapset_id;
 
-    match download::do_download_with_entry(state, headers, &beatmap_entry).await {
+    match download::do_download_with_entry(state, &beatmap_entry).await {
         Ok(items) => DownloadResponse {
             code: 0,
             items,

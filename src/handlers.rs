@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::extract::{Path, Query, State};
-use axum::http::{header, HeaderMap, StatusCode};
+use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 
@@ -60,7 +60,6 @@ pub async fn charts_list(
 pub async fn download_chart(
     State(state): State<Arc<AppState>>,
     Query(params): Query<DownloadQueryParams>,
-    headers: HeaderMap,
 ) -> Json<DownloadResponse> {
     if let Err(code) = check_auth(&state, params.uid(), params.key(), params.api()) {
         return Json(DownloadResponse {
@@ -70,7 +69,7 @@ pub async fn download_chart(
             cid: params.cid,
         });
     }
-    Json(services::download_chart(&state, params.cid, &headers).await)
+    Json(services::download_chart(&state, params.cid).await)
 }
 
 pub async fn send_chart_resource(

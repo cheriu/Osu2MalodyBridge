@@ -2,7 +2,6 @@ use std::fs;
 use std::io::Read;
 use std::path::Path;
 
-use axum::http::HeaderMap;
 use md5::{Digest, Md5};
 use rosu_v2::prelude::BeatmapExtended;
 use tracing::info;
@@ -20,12 +19,11 @@ use crate::osu_parser;
 
 pub(super) async fn do_download_with_entry(
     state: &AppState,
-    headers: &HeaderMap,
     beatmap_entry: &BeatmapCacheEntry,
 ) -> anyhow::Result<Vec<DownloadItem>> {
     let mapset_id = beatmap_entry.mapset_id;
 
-    let osz_filename = format!("{}n.osz", mapset_id);
+    let osz_filename = format!("{}.osz", mapset_id);
     let osz_path = Path::new(&state.config.malody.server.tmp).join(&osz_filename);
 
     if !osz_path.exists() {
@@ -41,21 +39,18 @@ pub(super) async fn do_download_with_entry(
         }
     }
 
-    let host = headers
-        .get("Host")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("localhost");
+    let scheme = if state.config.server.tls_cert.is_some() { "https" } else { "http" };
+    let port = state.config.server.port;
 
-    // Detect scheme: X-Forwarded-Proto (reverse proxy), or TLS config on this server
-    let is_https = headers
-        .get("X-Forwarded-Proto")
-        .and_then(|v| v.to_str().ok())
-        .map(|v| v.eq_ignore_ascii_case("https"))
-        .unwrap_or(false)
-        || state.config.server.tls_cert.is_some();
-
-    let scheme = if is_https { "https" } else { "http" };
-    let base_url = format!("{}://{}/{}", scheme, host, API_BASE_PATH);
+    let h = &state.config.server.host;
+    let host_port = if h.parse::<std::net::Ipv6Addr>().is_ok() {
+        format!("[{}]:{}", h, port)
+    } else if scheme == "https" && port == 443 || scheme == "http" && port == 80 {
+        h.to_string()
+    } else {
+        format!("{}:{}", h, port)
+    };
+    let base_url = format!("{}://{}/{}", scheme, host_port, API_BASE_PATH);
 
     build_download_items(&osz_path, beatmap_entry, &base_url)
 }
@@ -145,7 +140,7 @@ pub(super) async fn do_send_resource(
         .map_err(|e| (500, format!("Beatmap not found: {:?}", e)))?;
 
     let osz_path = Path::new(&state.config.malody.server.tmp)
-        .join(format!("{}n.osz", beatmap_entry.mapset_id));
+        .join(format!("{}.osz", beatmap_entry.mapset_id));
 
     if !osz_path.exists() {
         return Err((404, "osz file not found".into()));

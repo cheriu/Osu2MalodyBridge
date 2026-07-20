@@ -1,6 +1,6 @@
 server:
   port: 8081
-  # bind_address: "::"  # dual-stack (default). Use "0.0.0.0" for IPv4 only.
+  host: 192.168.1.1  # required: public IP or domain for download URLs,examples: `malody.example.com`, `192.168.1.100`,`::1`
   # tls_cert: "/path/to/cert.pem"  # enable HTTPS (both cert + key required)
   # tls_key: "/path/to/key.pem"
 malody:

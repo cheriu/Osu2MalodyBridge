@@ -32,25 +32,20 @@ async fn main() -> anyhow::Result<()> {
     let state = Arc::new(AppState::new(config.clone(), osu));
     let app = create_router(state);
 
-    // Raw bind address for socket: bracket IPv6 (e.g. "[::]:8080"), no bracket for IPv4
-    let bind_addr = if config.server.bind_address.contains(':') {
-        format!("[{}]:{}", config.server.bind_address, config.server.port)
-    } else {
-        format!("{}:{}", config.server.bind_address, config.server.port)
-    };
+    let listen_addr = format!("[::]:{}", config.server.port);
 
     match (&config.server.tls_cert, &config.server.tls_key) {
         (Some(cert), Some(key)) => {
-            info!("Starting HTTPS server on {}", bind_addr);
+            info!("Starting HTTPS server on {}", listen_addr);
             let tls_config =
                 axum_server::tls_rustls::RustlsConfig::from_pem_file(cert, key).await?;
-            axum_server::bind_rustls(bind_addr.parse()?, tls_config)
+            axum_server::bind_rustls(listen_addr.parse()?, tls_config)
                 .serve(app.into_make_service())
                 .await?;
         }
         _ => {
-            info!("Starting HTTP server on {}", bind_addr);
-            let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
+            info!("Starting HTTP server on {}", listen_addr);
+            let listener = tokio::net::TcpListener::bind(&listen_addr).await?;
             axum::serve(listener, app).await?;
         }
     }

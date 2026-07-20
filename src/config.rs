@@ -11,9 +11,10 @@ pub struct Config {
 pub struct ServerConfig {
     #[serde(default = "default_port")]
     pub port: u16,
-    /// Bind address. Default `::` for dual-stack IPv4/IPv6. Use `0.0.0.0` for IPv4 only.
-    #[serde(default = "default_bind_address")]
-    pub bind_address: String,
+    /// Public hostname for download URLs. Required.
+    /// Examples: `malody.example.com`, `192.168.1.100`,`::1`
+    #[serde(default)]
+    pub host: String,
     /// Path to TLS certificate (PEM). Enables HTTPS when both cert and key are set.
     #[serde(default)]
     pub tls_cert: Option<String>,
@@ -70,20 +71,16 @@ impl DownloadMirror {
     pub fn url_for(&self, mapset_id: u32) -> String {
         match self {
             Self::Hinamizawa => {
-                format!("https://mirror.hinamizawa.ai/api/v1/hinai/d/{mapset_id}n")
+                format!("https://mirror.hinamizawa.ai/api/v1/hinai/d/{mapset_id}")
             }
-            Self::Catboy => format!("https://catboy.best/d/{mapset_id}n"),
-            Self::OsuDirect => format!("https://osu.direct/api/d/{mapset_id}?noVideo=true"),
+            Self::Catboy => format!("https://catboy.best/d/{mapset_id}"),
+            Self::OsuDirect => format!("https://osu.direct/api/d/{mapset_id}"),
         }
     }
 }
 
 fn default_port() -> u16 {
     8081
-}
-
-fn default_bind_address() -> String {
-    "::".to_string()
 }
 
 fn default_api_version() -> i32 {
@@ -148,6 +145,9 @@ impl Config {
         }
         if self.server.port == 0 {
             anyhow::bail!("Server port must not be 0");
+        }
+        if self.server.host.is_empty() {
+            anyhow::bail!("server.host is required — set it to your server's public IP or domain");
         }
         match (&self.server.tls_cert, &self.server.tls_key) {
             (Some(_), None) => anyhow::bail!("tls_key is required when tls_cert is set"),

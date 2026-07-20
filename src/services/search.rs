@@ -1,8 +1,92 @@
 use rosu_v2::prelude::*;
-use tracing::{error, info};
+use tracing::info;
 
 use super::AppState;
+use crate::cache::{list_search_key, promote_search_key, SearchChain, SearchChainCache};
 use crate::models::*;
+
+/// Fetch the page containing `from` from the search chain cache,
+/// or fetch it from the osu! API and cache it.
+async fn get_or_fetch_page(
+    state: &AppState,
+    chain_cache: &SearchChainCache,
+    search_key: u64,
+    from: i32,
+    word: &str,
+    is_promote: bool,
+) -> anyhow::Result<BeatmapsetSearchResult> {
+    // Try to find the page in the existing chain
+    if let Some(chain_last) = chain_cache.get_chain_last(search_key) {
+        let chain = chain_cache.get_full_chain(search_key);
+
+        let mut offset = 0i32;
+        for (idx, page) in chain.iter().enumerate() {
+            let page_size = page.mapsets.len() as i32;
+            if from >= offset && from < offset + page_size {
+                info!("Cache HIT: page {} for from={} (range {}..{})", idx, from, offset, offset + page_size);
+                return Ok(page.clone());
+            }
+            offset += page_size;
+        }
+
+        let mut cursor = chain_last;
+        while offset <= from {
+            if !cursor.has_more() {
+                return Ok(cursor);
+            }
+            info!("Walking forward with get_next() (offset={})", offset);
+            match cursor.get_next(state.osu_client()).await {
+                Some(Ok(next)) => {
+                    cursor = next;
+                    chain_cache.push_page(search_key, cursor.clone());
+                }
+                Some(Err(e)) => return Err(e.into()),
+                None => return Ok(cursor),
+            }
+            offset += cursor.mapsets.len() as i32;
+        }
+        return Ok(cursor);
+    }
+
+    // No chain — fresh search
+    info!("Fresh search for target from={}", from);
+    let mut result = if is_promote {
+        state.osu_client()
+            .beatmapset_search()
+            .mode(GameMode::Mania)
+            .nsfw(false)
+            .spotlights(true)
+            .await?
+    } else {
+        let mut search = state.osu_client()
+            .beatmapset_search()
+            .mode(GameMode::Mania)
+            .nsfw(false);
+        if !word.is_empty() {
+            search = search.query(word);
+        }
+        search.await?
+    };
+
+    let chain = SearchChain::new(result.clone());
+    chain_cache.put_chain(search_key, chain);
+
+    let mut offset = result.mapsets.len() as i32;
+    while offset <= from && result.has_more() {
+        info!("Walking to from={}, current offset={}", from, offset);
+        match result.get_next(state.osu_client()).await {
+            Some(Ok(next)) => {
+                result = next;
+                chain_cache.push_page(search_key, result.clone());
+            }
+            Some(Err(e)) => return Err(e.into()),
+            None => break,
+        }
+        offset += result.mapsets.len() as i32;
+    }
+
+    Ok(result)
+}
 
 // ---------------------------------------------------------------------------
 // Internal: song list
@@ -15,50 +99,14 @@ pub(super) async fn do_song_list(
     let from = params.from.unwrap_or(0);
     let org = params.org.unwrap_or(0);
     let word = params.word.as_deref().unwrap_or("");
+    let search_key = list_search_key(params);
 
-    // Try to get the page starting at `from`. If we have a result cached
-    // for this `from` value, it was pre-cached from the previous page
-    // request. Call get_next() to advance to the actual page at this offset.
-    let result = if let Some(cached) = state.list_cache.get(params) {
-        info!("List: cache hit for from={}, calling get_next()", from);
-        match cached.get_next(state.osu_client()).await {
-            Some(Ok(next)) => {
-                info!("List: get_next() returned {} mapsets", next.mapsets.len());
-                next
-            }
-            other => {
-                error!("List: get_next() failed for from={}: {:?}", from, other.as_ref().map(|r| r.as_ref().map(|_| ())));
-                return Err(anyhow::anyhow!("get_next failed"));
-            }
-        }
-    } else {
-        let mut search = state.osu_client().beatmapset_search();
-        search = search.mode(GameMode::Mania).nsfw(false);
-        if !word.is_empty() {
-            search = search.query(word);
-        }
-
-        let r = search.await?;
-        info!(
-            "List: fresh search for '{}', got {} mapsets (total={})",
-            word,
-            r.mapsets.len(),
-            r.total
-        );
-        r
-    };
+    // Look up the chain for this search. The chain stores pages indexed
+    // sequentially (0, 1, 2, ...). We need to find which page contains `from`.
+    // Strategy: walk the chain from page 0, tracking cumulative offsets.
+    let result = get_or_fetch_page(state, &state.list_chain, search_key, from, word, false).await?;
 
     let response = search_result_to_paged_songs(&result, from, org);
-
-    // Pre-cache this result for the NEXT page's `from` value,
-    // mirroring the Kotlin cursor_string caching pattern.
-    if result.has_more() {
-        let next_from = from + result.mapsets.len() as i32;
-        let mut next_params = params.clone();
-        next_params.from = Some(next_from);
-        state.list_cache.put(&next_params, result);
-    }
-
     Ok(response)
 }
 
@@ -72,44 +120,11 @@ pub(super) async fn do_song_promote(
 ) -> anyhow::Result<PagedResponse<Song>> {
     let from = params.from.unwrap_or(0);
     let org = params.org.unwrap_or(0);
+    let search_key = promote_search_key(params);
 
-    let result = if let Some(cached) = state.promote_cache.get(params) {
-        info!("Promote: cache hit for from={}, calling get_next()", from);
-        match cached.get_next(state.osu_client()).await {
-            Some(Ok(next)) => {
-                info!("Promote: get_next() returned {} mapsets", next.mapsets.len());
-                next
-            }
-            other => {
-                error!("Promote: get_next() failed for from={}: {:?}", from, other.as_ref().map(|r| r.as_ref().map(|_| ())));
-                return Err(anyhow::anyhow!("get_next failed"));
-            }
-        }
-    } else {
-        let r = state
-            .osu_client()
-            .beatmapset_search()
-            .mode(GameMode::Mania)
-            .nsfw(false)
-            .spotlights(true)
-            .await?;
-        info!(
-            "Promote: fresh search, got {} mapsets (total={})",
-            r.mapsets.len(),
-            r.total
-        );
-        r
-    };
+    let result = get_or_fetch_page(state, &state.promote_chain, search_key, from, "", true).await?;
 
     let response = search_result_to_paged_songs(&result, from, org);
-
-    if result.has_more() {
-        let next_from = from + result.mapsets.len() as i32;
-        let mut next_params = params.clone();
-        next_params.from = Some(next_from);
-        state.promote_cache.put(&next_params, result);
-    }
-
     Ok(response)
 }
 

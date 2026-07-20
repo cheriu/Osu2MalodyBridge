@@ -6,7 +6,7 @@ use rsa::RsaPublicKey;
 use sha2::{Digest, Sha256};
 use tracing::{error, warn};
 
-use crate::cache::{BeatmapCache, ListSearchCache, PromoteSearchCache};
+use crate::cache::{BeatmapCache, SearchChainCache};
 use crate::config::Config;
 use crate::models::*;
 
@@ -23,8 +23,8 @@ pub struct AppState {
     osu: Option<Osu>,
     pub http_client: HttpClient,
     pub beatmap_cache: BeatmapCache,
-    pub list_cache: ListSearchCache,
-    pub promote_cache: PromoteSearchCache,
+    pub list_chain: SearchChainCache,
+    pub promote_chain: SearchChainCache,
     /// Parsed Malody RSA public key for uid/key verification.
     malody_pubkey: Option<RsaPublicKey>,
 }
@@ -43,8 +43,8 @@ impl AppState {
             osu: Some(osu),
             http_client,
             beatmap_cache: BeatmapCache::new(),
-            list_cache: ListSearchCache::new(),
-            promote_cache: PromoteSearchCache::new(),
+            list_chain: SearchChainCache::new(),
+            promote_chain: SearchChainCache::new(),
             malody_pubkey,
         }
     }

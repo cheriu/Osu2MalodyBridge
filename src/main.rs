@@ -38,8 +38,12 @@ async fn main() -> anyhow::Result<()> {
     } else {
         format!("{}:{}", config.server.bind_address, config.server.port)
     };
-    // Raw bind address for socket: "host:port"
-    let bind_addr = format!("{}:{}", config.server.bind_address, config.server.port);
+    // Raw bind address for socket: bracket IPv6 (e.g. "[::]:8080"), no bracket for IPv4
+    let bind_addr = if config.server.bind_address.contains(':') {
+        format!("[{}]:{}", config.server.bind_address, config.server.port)
+    } else {
+        format!("{}:{}", config.server.bind_address, config.server.port)
+    };
 
     match (&config.server.tls_cert, &config.server.tls_key) {
         (Some(cert), Some(key)) => {

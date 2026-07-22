@@ -1,6 +1,6 @@
 # osu2malody-store
 
-Allow [Malody V](https://mugzone.net/) client to browse, search, and download osu!mania beatmaps directly.
+Allow [Malody V](https://malody.mugzone.net/) client to browse, search, and download osu!mania beatmaps directly.
 
 Built with Rust + [rosu-v2](https://github.com/MaxOhn/rosu-v2).
 
@@ -43,8 +43,9 @@ This project is inspired by [flben233/OsuToMalodyServer](https://github.com/flbe
 3. Run the server:
    - **Linux**: `./osu2malody-store`
    - **Windows**: `osu2malody-store.exe`
+   - **Termux**: `./osu2malody-store`
 
-4. In Malody V, go to **Settings → Store → Custom Server**, enter `http://your-server-ip:8081`.
+4. In Malody V, go to **Settings → Store → Custom Server**, enter `http://localhost:8081`.
 
 5. Enjoy!
 
@@ -55,7 +56,7 @@ All settings in `application.yml`, overridable via environment variables.
 ```yaml
 server:
   port: 8081                        # listen port
-  host: 192.168.1.1                 # public hostname for resources
+  host: localhost                   # public hostname for resources
   # tls_cert: /path/to/cert.pem     # TLS certificate
   # tls_key: /path/to/key.pem       # TLS private key
 
@@ -64,7 +65,7 @@ malody:
     api: 202310                     # server API version
     min: 202310                     # min client API version
     welcome: "Welcome!"             # welcome message
-    tmp: /tmp/Osu2Malody            # .osz cache directory
+    tmp: ./Osu2Malody               # .osz cache directory
     # verify_client_auth: false     # verify client uid/key signature
     # mirror: hinamizawa            # download mirror: hinamizawa, catboy, osudirect
   osu:
@@ -84,7 +85,7 @@ When `verify_client_auth: true`, the server verifies the RSA signature on client
 
 [Releases](https://github.com/cheriu/Osu2MalodyBridge/releases)
 
-Pre-built packages for Linux (x86_64) and Windows (x86_64).
+Pre-built packages for Linux (x86_64), Android (arm64, run in Termux) and Windows (x86_64).
 
 ## Build from Source
 

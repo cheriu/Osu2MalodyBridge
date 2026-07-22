@@ -1,6 +1,6 @@
 # osu2malody-store
 
-让 [Malody V](https://mugzone.net/) 客户端可以直接浏览、搜索和下载 osu!mania 谱面。
+让 [Malody V](https://malody.mugzone.net/) 客户端可以直接浏览、搜索和下载 osu!mania 谱面。
 
 基于 Rust + [rosu-v2](https://github.com/MaxOhn/rosu-v2) 构建。
 
@@ -31,20 +31,20 @@
    malody:
      osu:
        clientID: 12345
-       clientSecret: 你的 osu-oauth-密钥
+       clientSecret: 你的 osu-client-secret
    ```
 
    也可通过环境变量设置（无需修改配置文件）：
    ```bash
    export OSU_CLIENT_ID=12345
-   export OSU_CLIENT_SECRET=你的 osu-oauth-密钥
+   export OSU_CLIENT_SECRET=你的 osu-client-secret
    ```
 
 3. 运行服务器：
    - **Linux**: `./osu2malody-store`
    - **Windows**: `osu2malody-store.exe`
 
-4. 在 Malody V 中，进入 **设置 → 谱面商店 → 自定义服务器**，填入 `http://你的服务器IP:8081`。
+4. 在 Malody V 中，进入 **设置 → 谱面商店 → 自定义服务器**，填入 `http://localhost:8081`。
 
 5. 开始游玩！
 
@@ -55,7 +55,7 @@
 ```yaml
 server:
   port: 8081                        # 监听端口
-  host: 192.168.1.1                 # 下载谱面资源公开域名
+  host: localhost                 # 下载谱面资源公开域名
   # tls_cert: /path/to/cert.pem     # HTTPS 证书
   # tls_key: /path/to/key.pem       # HTTPS 密钥
 
@@ -64,7 +64,7 @@ malody:
     api: 202310                     # 服务器 API 版本
     min: 202310                     # 最低客户端 API 版本
     welcome: "Welcome!"             # 欢迎语
-    tmp: /tmp/Osu2Malody            # .osz 缓存目录
+    tmp: ./Osu2Malody               # .osz 缓存目录
     # verify_client_auth: false     # 是否验证客户端 uid/key 签名
     # mirror: hinamizawa            # 下载镜像: hinamizawa, catboy, osudirect
   osu:
@@ -84,7 +84,7 @@ malody:
 
 [Releases](https://github.com/cheriu/Osu2MalodyBridge/releases)
 
-提供 Linux (x86_64) 和 Windows (x86_64) 预编译包。
+提供 Linux (x86_64), Android (arm64, 在 Termux 中运行) 和 Windows (x86_64) 预编译包。
 
 ## 构建
 

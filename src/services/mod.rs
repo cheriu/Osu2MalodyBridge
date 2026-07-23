@@ -32,7 +32,11 @@ pub struct AppState {
 impl AppState {
     pub fn new(config: Config, osu: Osu) -> Self {
         let http_client = HttpClient::builder()
-            .user_agent("osu2malody-store/0.2.3 (+https://github.com/cheriu/Osu2MalodyBridge)")
+            .user_agent(concat!(
+                "osu2malody-store/",
+                env!("CARGO_PKG_VERSION"),
+                " (+https://github.com/cheriu/Osu2MalodyBridge)",
+            ))
             .build()
             .expect("Failed to build HTTP client");
 

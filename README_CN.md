@@ -1,6 +1,6 @@
 # osu2malody-store
 
-让 [Malody V](https://malody.mugzone.net/) 客户端可以直接浏览、搜索和下载 osu!mania 谱面。
+让 [Malody V](https://malody.mugzone.net/) 客户端可以直接浏览、搜索和下载 osu!mania，osu!taiko和 osu!catch 谱面。
 
 基于 Rust + [rosu-v2](https://github.com/MaxOhn/rosu-v2) 构建。
 

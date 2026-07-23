@@ -1,6 +1,6 @@
 # osu2malody-store
 
-Allow [Malody V](https://malody.mugzone.net/) client to browse, search, and download osu!mania beatmaps directly.
+Allow [Malody V](https://malody.mugzone.net/) client to browse, search, and download osu!mania, osu!taiko and osu!catch beatmaps directly.
 
 Built with Rust + [rosu-v2](https://github.com/MaxOhn/rosu-v2).
 

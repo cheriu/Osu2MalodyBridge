@@ -37,6 +37,6 @@ pub(super) fn beatmap_ext_to_chart(beatmap: &BeatmapExtended) -> Chart {
         length: beatmap.seconds_total as i32,
         chart_type: 1,
         size: 0,
-        mode: 1i32 << (malody_mode as i32),
+        mode: malody_mode as i32,
     }
 }

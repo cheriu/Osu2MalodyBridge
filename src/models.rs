@@ -1,4 +1,5 @@
-use serde::{Deserialize, Serialize};
+use rosu_v2::prelude::GameMode;
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// Malody game mode definitions per the Malody Store API spec.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -12,6 +13,7 @@ pub enum MalodyMode {
     Ring = 6,
     Slide = 7,
     Live = 8,
+    Cube = 9,
 }
 
 impl MalodyMode {
@@ -25,9 +27,60 @@ impl MalodyMode {
             6 => Some(Self::Ring),
             7 => Some(Self::Slide),
             8 => Some(Self::Live),
+            9 => Some(Self::Cube),
             _ => None,
         }
     }
+
+    /// Whether this mode maps to an osu! game mode we can actually search.
+    /// Modes without an osu! equivalent (Pad, Ring, Slide, Live, Cube)
+    /// return false — the caller should return empty results, not an error.
+    pub fn is_osu_searchable(self) -> bool {
+        matches!(self, Self::Any | Self::Key | Self::Catch | Self::Taiko)
+    }
+
+    /// Map Malody mode to the osu! GameMode used for API searches.
+    /// Only meaningful when `is_osu_searchable()` is true.
+    pub fn to_osu_game_mode(self) -> GameMode {
+        match self {
+            Self::Catch => GameMode::Catch,
+            Self::Taiko => GameMode::Taiko,
+            // Any, Key, and all Malody-only modes default to Mania
+            _ => GameMode::Mania,
+        }
+    }
+
+    /// Convert an osu! beatmap's GameMode to the corresponding Malody mode.
+    pub fn from_osu_game_mode(mode: GameMode) -> Self {
+        match mode {
+            GameMode::Osu => Self::Key,
+            GameMode::Taiko => Self::Taiko,
+            GameMode::Catch => Self::Catch,
+            GameMode::Mania => Self::Key,
+        }
+    }
+}
+
+impl Default for MalodyMode {
+    fn default() -> Self {
+        Self::Key
+    }
+}
+
+/// Custom deserializer for `MalodyMode` from an i32 query parameter.
+/// Invalid value → deserialization error → axum returns 400.
+fn deserialize_mode<'de, D: Deserializer<'de>>(deserializer: D) -> Result<MalodyMode, D::Error> {
+    let value = i32::deserialize(deserializer)?;
+    MalodyMode::from_i32(value).ok_or_else(|| {
+        serde::de::Error::invalid_value(
+            serde::de::Unexpected::Signed(value as i64),
+            &"a valid Malody mode (-1, 0, 3, 4, 5, 6, 7, 8, 9)",
+        )
+    })
+}
+
+fn default_mode() -> MalodyMode {
+    MalodyMode::Key
 }
 
 #[derive(Debug, Serialize)]
@@ -99,8 +152,8 @@ pub struct ListQueryParams {
     pub word: Option<String>,
     #[serde(default)]
     pub org: Option<i32>,
-    #[serde(default)]
-    pub mode: Option<i32>,
+    #[serde(default = "default_mode", deserialize_with = "deserialize_mode")]
+    pub mode: MalodyMode,
     #[serde(default)]
     pub lvge: Option<i32>,
     #[serde(default)]
@@ -124,8 +177,8 @@ pub struct ListQueryParams {
 pub struct PromoteQueryParams {
     #[serde(default)]
     pub org: Option<i32>,
-    #[serde(default)]
-    pub mode: Option<i32>,
+    #[serde(default = "default_mode", deserialize_with = "deserialize_mode")]
+    pub mode: MalodyMode,
     #[serde(default)]
     pub from: Option<i32>,
     #[serde(default)]
@@ -141,8 +194,8 @@ pub struct ChartsQueryParams {
     pub sid: i32,
     #[serde(default)]
     pub beta: Option<i32>,
-    #[serde(default)]
-    pub mode: Option<i32>,
+    #[serde(default = "default_mode", deserialize_with = "deserialize_mode")]
+    pub mode: MalodyMode,
     #[serde(default)]
     pub from: Option<i32>,
     #[serde(default)]
@@ -222,15 +275,39 @@ mod tests {
         assert_eq!(MalodyMode::from_i32(6), Some(MalodyMode::Ring));
         assert_eq!(MalodyMode::from_i32(7), Some(MalodyMode::Slide));
         assert_eq!(MalodyMode::from_i32(8), Some(MalodyMode::Live));
+        assert_eq!(MalodyMode::from_i32(9), Some(MalodyMode::Cube));
     }
 
     #[test]
     fn malody_mode_from_i32_invalid() {
         assert_eq!(MalodyMode::from_i32(1), None);
         assert_eq!(MalodyMode::from_i32(2), None);
-        assert_eq!(MalodyMode::from_i32(9), None);
         assert_eq!(MalodyMode::from_i32(100), None);
         assert_eq!(MalodyMode::from_i32(-2), None);
+    }
+
+    #[test]
+    fn malody_mode_is_osu_searchable() {
+        assert!(MalodyMode::Any.is_osu_searchable());
+        assert!(MalodyMode::Key.is_osu_searchable());
+        assert!(MalodyMode::Catch.is_osu_searchable());
+        assert!(MalodyMode::Taiko.is_osu_searchable());
+        assert!(!MalodyMode::Pad.is_osu_searchable());
+        assert!(!MalodyMode::Ring.is_osu_searchable());
+        assert!(!MalodyMode::Slide.is_osu_searchable());
+        assert!(!MalodyMode::Live.is_osu_searchable());
+        assert!(!MalodyMode::Cube.is_osu_searchable());
+    }
+
+    #[test]
+    fn malody_mode_to_osu_game_mode() {
+        use rosu_v2::prelude::GameMode;
+        assert_eq!(MalodyMode::Any.to_osu_game_mode(), GameMode::Mania);
+        assert_eq!(MalodyMode::Key.to_osu_game_mode(), GameMode::Mania);
+        assert_eq!(MalodyMode::Catch.to_osu_game_mode(), GameMode::Catch);
+        assert_eq!(MalodyMode::Taiko.to_osu_game_mode(), GameMode::Taiko);
+        assert_eq!(MalodyMode::Pad.to_osu_game_mode(), GameMode::Mania);
+        assert_eq!(MalodyMode::Cube.to_osu_game_mode(), GameMode::Mania);
     }
 
     #[test]
@@ -272,7 +349,7 @@ mod tests {
     fn list_query_params_defaults() {
         let params: ListQueryParams = serde_urlencoded::from_str("").unwrap();
         assert_eq!(params.word, None);
-        assert_eq!(params.mode, None);
+        assert_eq!(params.mode, MalodyMode::Key);
         assert_eq!(params.from, None);
     }
 
@@ -282,7 +359,7 @@ mod tests {
             serde_urlencoded::from_str("word=test&mode=0&from=50&uid=123&api=202310&key=abc")
                 .unwrap();
         assert_eq!(params.word, Some("test".to_string()));
-        assert_eq!(params.mode, Some(0));
+        assert_eq!(params.mode, MalodyMode::Key);
         assert_eq!(params.from, Some(50));
         assert_eq!(params.uid(), Some(123));
         assert_eq!(params.api(), Some(202310));

@@ -133,7 +133,7 @@ pub fn list_search_key(params: &crate::models::ListQueryParams) -> u64 {
         h = h.wrapping_mul(31).wrapping_add(b as u64);
     }
     h = h.wrapping_mul(31).wrapping_add(params.org.unwrap_or(0) as u64);
-    h = h.wrapping_mul(31).wrapping_add(params.mode.unwrap_or(-1) as u64);
+    h = h.wrapping_mul(31).wrapping_add(params.mode as i32 as u64);
     h = h.wrapping_mul(31).wrapping_add(params.lvge.unwrap_or(0) as u64);
     h = h.wrapping_mul(31).wrapping_add(params.lvle.unwrap_or(0) as u64);
     h = h.wrapping_mul(31).wrapping_add(params.beta.unwrap_or(0) as u64);
@@ -142,6 +142,6 @@ pub fn list_search_key(params: &crate::models::ListQueryParams) -> u64 {
 
 pub fn promote_search_key(params: &crate::models::PromoteQueryParams) -> u64 {
     let org = params.org.unwrap_or(0) as u64;
-    let mode = params.mode.unwrap_or(-1) as u64;
+    let mode = params.mode as i32 as u64;
     org.wrapping_mul(31).wrapping_add(mode)
 }

@@ -36,14 +36,35 @@ async fn server_info_returns_valid_json() {
 }
 
 #[tokio::test]
-async fn song_list_invalid_mode_returns_error() {
+async fn song_list_invalid_mode_returns_400() {
     let state = Arc::new(test_utils::dummy_state());
     let app = test_app(state);
 
+    // mode=1 is not a valid MalodyMode — deserialization fails, axum returns 400.
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/store/list?mode=5")
+                .uri("/api/store/list?mode=1")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn song_list_malody_only_mode_returns_empty_success() {
+    let state = Arc::new(test_utils::dummy_state());
+    let app = test_app(state);
+
+    // Pad (4) is a valid Malody mode with no osu! equivalent.
+    // Should return empty success (code 0), not an error.
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/store/list?mode=4")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -53,7 +74,7 @@ async fn song_list_invalid_mode_returns_error() {
     assert_eq!(response.status(), StatusCode::OK);
     let body = axum::body::to_bytes(response.into_body(), 1024).await.unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(json["code"], -1);
+    assert_eq!(json["code"], 0);
     assert_eq!(json["hasMore"], false);
     assert!(json["data"].as_array().unwrap().is_empty());
 }
@@ -139,7 +160,7 @@ malody:
 }
 
 #[tokio::test]
-async fn client_auth_passes_with_valid_params_then_mode_rejected() {
+async fn client_auth_passes_and_mode_filter_applies() {
     let config = {
         let yaml = r#"
 server:
@@ -161,10 +182,12 @@ malody:
     let state = Arc::new(test_utils::dummy_state_with_config(config));
     let app = test_app(state);
 
+    // mode=4 (Pad) is a valid Malody mode with no osu! equivalent.
+    // Auth should pass, then mode logic returns empty success.
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/store/list?mode=5&uid=1&key=any&api=202310")
+                .uri("/api/store/list?mode=4&uid=1&key=any&api=202310")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -174,7 +197,7 @@ malody:
     assert_eq!(response.status(), StatusCode::OK);
     let body = axum::body::to_bytes(response.into_body(), 1024).await.unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(json["code"], -1); // auth passed, mode invalid
+    assert_eq!(json["code"], 0); // auth passed, mode has no osu! results
 }
 
 // ---------------------------------------------------------------------------

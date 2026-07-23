@@ -14,7 +14,10 @@ async fn get_or_fetch_page(
     from: i32,
     word: &str,
     is_promote: bool,
+    mode: MalodyMode,
 ) -> anyhow::Result<BeatmapsetSearchResult> {
+    let game_mode = mode.to_osu_game_mode();
+
     // Try to find the page in the existing chain
     if let Some(chain_last) = chain_cache.get_chain_last(search_key) {
         let chain = chain_cache.get_full_chain(search_key);
@@ -49,18 +52,18 @@ async fn get_or_fetch_page(
     }
 
     // No chain — fresh search
-    info!("Fresh search for target from={}", from);
+    info!("Fresh search for target from={} (mode={:?})", from, game_mode);
     let mut result = if is_promote {
         state.osu_client()
             .beatmapset_search()
-            .mode(GameMode::Mania)
+            .mode(game_mode)
             .nsfw(false)
             .spotlights(true)
             .await?
     } else {
         let mut search = state.osu_client()
             .beatmapset_search()
-            .mode(GameMode::Mania)
+            .mode(game_mode)
             .nsfw(false);
         if !word.is_empty() {
             search = search.query(word);
@@ -95,6 +98,7 @@ async fn get_or_fetch_page(
 pub(super) async fn do_song_list(
     state: &AppState,
     params: &ListQueryParams,
+    mode: MalodyMode,
 ) -> anyhow::Result<PagedResponse<Song>> {
     let from = params.from.unwrap_or(0);
     let org = params.org.unwrap_or(0);
@@ -104,7 +108,7 @@ pub(super) async fn do_song_list(
     // Look up the chain for this search. The chain stores pages indexed
     // sequentially (0, 1, 2, ...). We need to find which page contains `from`.
     // Strategy: walk the chain from page 0, tracking cumulative offsets.
-    let result = get_or_fetch_page(state, &state.list_chain, search_key, from, word, false).await?;
+    let result = get_or_fetch_page(state, &state.list_chain, search_key, from, word, false, mode).await?;
 
     let response = search_result_to_paged_songs(&result, from, org);
     Ok(response)
@@ -117,12 +121,13 @@ pub(super) async fn do_song_list(
 pub(super) async fn do_song_promote(
     state: &AppState,
     params: &PromoteQueryParams,
+    mode: MalodyMode,
 ) -> anyhow::Result<PagedResponse<Song>> {
     let from = params.from.unwrap_or(0);
     let org = params.org.unwrap_or(0);
     let search_key = promote_search_key(params);
 
-    let result = get_or_fetch_page(state, &state.promote_chain, search_key, from, "", true).await?;
+    let result = get_or_fetch_page(state, &state.promote_chain, search_key, from, "", true, mode).await?;
 
     let response = search_result_to_paged_songs(&result, from, org);
     Ok(response)
@@ -174,6 +179,16 @@ pub(super) fn mapset_to_song(mapset: &BeatmapsetExtended, org: i32) -> Song {
         .and_then(|maps| maps.iter().map(|b| b.seconds_total).min())
         .unwrap_or(0) as i32;
 
+    let mode_bitmask = mapset
+        .maps
+        .as_ref()
+        .map(|maps| {
+            maps.iter()
+                .map(|b| MalodyMode::from_osu_game_mode(b.mode))
+                .fold(0i32, |acc, m| acc | (1i32 << (m as i32)))
+        })
+        .unwrap_or(0);
+
     let cover = &mapset.covers.list_2x;
 
     Song {
@@ -183,8 +198,7 @@ pub(super) fn mapset_to_song(mapset: &BeatmapsetExtended, org: i32) -> Song {
         bpm: mapset.bpm,
         title,
         artist: mapset.artist.clone(),
-        mode: 0,
+        mode: mode_bitmask,
         time: mapset.last_updated.unix_timestamp(),
     }
 }
-

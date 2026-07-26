@@ -202,3 +202,39 @@ pub(super) fn mapset_to_song(mapset: &BeatmapsetExtended, org: i32) -> Song {
         time: mapset.last_updated.unix_timestamp(),
     }
 }
+
+// ---------------------------------------------------------------------------
+// Internal: query (lookup by sid or cid)
+// ---------------------------------------------------------------------------
+
+pub(super) async fn do_song_query(
+    state: &AppState,
+    sid: Option<i32>,
+    cid: Option<i32>,
+    org: i32,
+) -> anyhow::Result<PagedResponse<Song>> {
+    let mapset_id: u32 = if let Some(c) = cid {
+        let beatmap: BeatmapExtended = state.osu_client().beatmap().map_id(c as u32).await?;
+        beatmap.mapset_id
+    } else if let Some(s) = sid {
+        s as u32
+    } else {
+        anyhow::bail!("sid or cid must be provided")
+    };
+
+    let mapset: BeatmapsetExtended = if let Some(cached) = state.beatmapset_cache.get(mapset_id) {
+        cached
+    } else {
+        let fetched: BeatmapsetExtended = state.osu_client().beatmapset(mapset_id).await?;
+        state.beatmapset_cache.put(mapset_id, fetched.clone());
+        fetched
+    };
+    let song = mapset_to_song(&mapset, org);
+
+    Ok(PagedResponse {
+        code: 0,
+        has_more: false,
+        next: 0,
+        data: vec![song],
+    })
+}

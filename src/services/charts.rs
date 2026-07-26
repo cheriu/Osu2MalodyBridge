@@ -8,7 +8,15 @@ use crate::models::*;
 // ---------------------------------------------------------------------------
 
 pub(super) async fn do_charts_list(state: &AppState, sid: i32) -> anyhow::Result<PagedResponse<Chart>> {
-    let mapset: BeatmapsetExtended = state.osu_client().beatmapset(sid as u32).await?;
+    let mapset_id = sid as u32;
+
+    let mapset = if let Some(cached) = state.beatmapset_cache.get(mapset_id) {
+        cached
+    } else {
+        let fetched: BeatmapsetExtended = state.osu_client().beatmapset(mapset_id).await?;
+        state.beatmapset_cache.put(mapset_id, fetched.clone());
+        fetched
+    };
 
     let charts: Vec<Chart> = mapset
         .maps

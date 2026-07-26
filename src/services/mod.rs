@@ -6,7 +6,7 @@ use rsa::RsaPublicKey;
 use sha2::{Digest, Sha256};
 use tracing::{error, warn};
 
-use crate::cache::{BeatmapCache, SearchChainCache};
+use crate::cache::{BeatmapCache, BeatmapsetCache, SearchChainCache};
 use crate::config::Config;
 use crate::models::*;
 
@@ -23,6 +23,7 @@ pub struct AppState {
     osu: Option<Osu>,
     pub http_client: HttpClient,
     pub beatmap_cache: BeatmapCache,
+    pub beatmapset_cache: BeatmapsetCache,
     pub list_chain: SearchChainCache,
     pub promote_chain: SearchChainCache,
     /// Parsed Malody RSA public key for uid/key verification.
@@ -47,6 +48,7 @@ impl AppState {
             osu: Some(osu),
             http_client,
             beatmap_cache: BeatmapCache::new(),
+            beatmapset_cache: BeatmapsetCache::new(),
             list_chain: SearchChainCache::new(),
             promote_chain: SearchChainCache::new(),
             malody_pubkey,
@@ -212,6 +214,34 @@ pub async fn song_promote(state: &AppState, params: &PromoteQueryParams) -> Page
         Ok(resp) => resp,
         Err(e) => {
             error!("Promote error for {:?}: {:?}", params, e);
+            PagedResponse {
+                code: -1,
+                has_more: false,
+                next: 0,
+                data: vec![],
+            }
+        }
+    }
+}
+
+pub async fn song_query(state: &AppState, params: &SongQueryParams) -> PagedResponse<Song> {
+    let sid = params.sid;
+    let cid = params.cid;
+    let org = params.org.unwrap_or(0);
+
+    if sid.is_none() && cid.is_none() {
+        return PagedResponse {
+            code: -1,
+            has_more: false,
+            next: 0,
+            data: vec![],
+        };
+    }
+
+    match search::do_song_query(state, sid, cid, org).await {
+        Ok(resp) => resp,
+        Err(e) => {
+            error!("Query error for sid={:?} cid={:?}: {:?}", sid, cid, e);
             PagedResponse {
                 code: -1,
                 has_more: false,

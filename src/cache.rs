@@ -1,5 +1,5 @@
 use moka::sync::Cache;
-use rosu_v2::model::beatmap::BeatmapsetSearchResult;
+use rosu_v2::model::beatmap::{BeatmapsetExtended, BeatmapsetSearchResult};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -34,6 +34,29 @@ impl BeatmapCache {
 
     pub fn put(&self, beatmap_id: u32, entry: BeatmapCacheEntry) {
         self.cache.insert(beatmap_id, entry);
+    }
+}
+
+/// Caches full beatmapset metadata by mapset ID.
+pub struct BeatmapsetCache {
+    cache: Cache<u32, BeatmapsetExtended>,
+}
+
+impl BeatmapsetCache {
+    pub fn new() -> Self {
+        let cache = Cache::builder()
+            .max_capacity(2000)
+            .time_to_live(Duration::from_secs(60 * 60))
+            .build();
+        Self { cache }
+    }
+
+    pub fn get(&self, mapset_id: u32) -> Option<BeatmapsetExtended> {
+        self.cache.get(&mapset_id)
+    }
+
+    pub fn put(&self, mapset_id: u32, mapset: BeatmapsetExtended) {
+        self.cache.insert(mapset_id, mapset);
     }
 }
 

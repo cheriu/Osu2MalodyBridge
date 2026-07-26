@@ -231,6 +231,22 @@ pub struct ResourceQueryParams {
     pub api: Option<i32>,
 }
 
+#[derive(Debug, Deserialize, Default)]
+pub struct SongQueryParams {
+    #[serde(default)]
+    pub sid: Option<i32>,
+    #[serde(default)]
+    pub cid: Option<i32>,
+    #[serde(default)]
+    pub org: Option<i32>,
+    #[serde(default)]
+    pub uid: Option<i32>,
+    #[serde(default)]
+    pub key: Option<String>,
+    #[serde(default)]
+    pub api: Option<i32>,
+}
+
 impl ListQueryParams {
     pub fn uid(&self) -> Option<i32> { self.uid }
     pub fn key(&self) -> Option<&str> { self.key.as_deref() }
@@ -256,6 +272,12 @@ impl DownloadQueryParams {
 }
 
 impl ResourceQueryParams {
+    pub fn uid(&self) -> Option<i32> { self.uid }
+    pub fn key(&self) -> Option<&str> { self.key.as_deref() }
+    pub fn api(&self) -> Option<i32> { self.api }
+}
+
+impl SongQueryParams {
     pub fn uid(&self) -> Option<i32> { self.uid }
     pub fn key(&self) -> Option<&str> { self.key.as_deref() }
     pub fn api(&self) -> Option<i32> { self.api }

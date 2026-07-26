@@ -36,6 +36,27 @@ async fn server_info_returns_valid_json() {
 }
 
 #[tokio::test]
+async fn song_query_missing_params_returns_error() {
+    let state = Arc::new(test_utils::dummy_state());
+    let app = test_app(state);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/store/query")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), 1024).await.unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["code"], -1);
+}
+
+#[tokio::test]
 async fn song_list_invalid_mode_returns_400() {
     let state = Arc::new(test_utils::dummy_state());
     let app = test_app(state);

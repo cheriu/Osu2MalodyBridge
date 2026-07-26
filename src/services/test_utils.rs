@@ -1,7 +1,7 @@
 /// Utilities for tests — creates AppState without needing real osu! credentials.
 use reqwest::Client as HttpClient;
 
-use crate::cache::{BeatmapCache, SearchChainCache};
+use crate::cache::{BeatmapCache, BeatmapsetCache, SearchChainCache};
 use crate::config::Config;
 
 use super::AppState;
@@ -33,6 +33,7 @@ pub fn dummy_state_with_config(config: Config) -> AppState {
         osu: None,
         http_client: HttpClient::new(),
         beatmap_cache: BeatmapCache::new(),
+        beatmapset_cache: BeatmapsetCache::new(),
         list_chain: SearchChainCache::new(),
         promote_chain: SearchChainCache::new(),
         malody_pubkey: None,
@@ -78,6 +79,7 @@ malody:
         osu: Some(osu),
         http_client: HttpClient::new(),
         beatmap_cache: BeatmapCache::new(),
+        beatmapset_cache: BeatmapsetCache::new(),
         list_chain: SearchChainCache::new(),
         promote_chain: SearchChainCache::new(),
         malody_pubkey: None,

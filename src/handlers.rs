@@ -72,6 +72,21 @@ pub async fn download_chart(
     Json(services::download_chart(&state, params.cid).await)
 }
 
+pub async fn song_query(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<SongQueryParams>,
+) -> Json<PagedResponse<Song>> {
+    if let Err(code) = check_auth(&state, params.uid(), params.key(), params.api()) {
+        return Json(PagedResponse {
+            code,
+            has_more: false,
+            next: 0,
+            data: vec![],
+        });
+    }
+    Json(services::song_query(&state, &params).await)
+}
+
 pub async fn send_chart_resource(
     State(state): State<Arc<AppState>>,
     Path(cid): Path<i32>,

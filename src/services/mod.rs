@@ -171,19 +171,15 @@ pub fn server_info(state: &AppState) -> ServerInfoResponse {
 }
 
 pub async fn song_list(state: &AppState, params: &ListQueryParams) -> PagedResponse<Song> {
-    let malody_mode = match params.mode {
-        MalodyMode::Any => MalodyMode::Key,
-        mode if mode.is_osu_searchable() => mode,
-        _ => {
-            return PagedResponse {
-                code: 0,
-                has_more: false,
-                next: 0,
-                data: vec![],
-            };
-        }
-    };
-    match search::do_song_list(state, params, malody_mode).await {
+    if !params.mode.is_osu_searchable() && params.mode != MalodyMode::Any {
+        return PagedResponse {
+            code: 0,
+            has_more: false,
+            next: 0,
+            data: vec![],
+        };
+    }
+    match search::do_song_list(state, params, params.mode).await {
         Ok(resp) => resp,
         Err(e) => {
             error!("List error for {:?}: {:?}", params, e);
@@ -198,19 +194,15 @@ pub async fn song_list(state: &AppState, params: &ListQueryParams) -> PagedRespo
 }
 
 pub async fn song_promote(state: &AppState, params: &PromoteQueryParams) -> PagedResponse<Song> {
-    let malody_mode = match params.mode {
-        MalodyMode::Any => MalodyMode::Key,
-        mode if mode.is_osu_searchable() => mode,
-        _ => {
-            return PagedResponse {
-                code: 0,
-                has_more: false,
-                next: 0,
-                data: vec![],
-            };
-        }
-    };
-    match search::do_song_promote(state, params, malody_mode).await {
+    if !params.mode.is_osu_searchable() && params.mode != MalodyMode::Any {
+        return PagedResponse {
+            code: 0,
+            has_more: false,
+            next: 0,
+            data: vec![],
+        };
+    }
+    match search::do_song_promote(state, params, params.mode).await {
         Ok(resp) => resp,
         Err(e) => {
             error!("Promote error for {:?}: {:?}", params, e);

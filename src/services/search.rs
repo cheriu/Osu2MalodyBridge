@@ -17,7 +17,11 @@ async fn get_or_fetch_page(
     follows: bool,
     mode: MalodyMode,
 ) -> anyhow::Result<BeatmapsetSearchResult> {
-    let game_mode = mode.to_osu_game_mode();
+    // Any means no mode filter — search all modes.
+    let game_mode = match mode {
+        MalodyMode::Any => None,
+        m => Some(m.to_osu_game_mode()),
+    };
 
     // Try to find the page in the existing chain
     if let Some(chain_last) = chain_cache.get_chain_last(search_key) {
@@ -56,8 +60,10 @@ async fn get_or_fetch_page(
     info!("Fresh search for target from={} (mode={:?})", from, game_mode);
     let mut search = state.osu_client()
         .beatmapset_search()
-        .mode(game_mode)
         .nsfw(false);
+    if let Some(m) = game_mode {
+        search = search.mode(m);
+    }
     if spotlights {
         search = search.spotlights(true);
     }
@@ -249,7 +255,7 @@ pub(super) async fn do_song_friend(
     let org = params.org.unwrap_or(0);
     let search_key = friend_search_key(params);
 
-    let result = get_or_fetch_page(state, &state.promote_chain, search_key, from, "", false, true, MalodyMode::Key).await?;
+    let result = get_or_fetch_page(state, &state.promote_chain, search_key, from, "", false, true, MalodyMode::Any).await?;
 
     let response = search_result_to_paged_songs(&result, from, org);
     Ok(response)

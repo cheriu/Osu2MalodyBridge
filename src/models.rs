@@ -63,7 +63,7 @@ impl MalodyMode {
 
 impl Default for MalodyMode {
     fn default() -> Self {
-        Self::Key
+        Self::Any
     }
 }
 
@@ -80,7 +80,7 @@ fn deserialize_mode<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Malody
 }
 
 fn default_mode() -> MalodyMode {
-    MalodyMode::Key
+    MalodyMode::Any
 }
 
 #[derive(Debug, Serialize)]
@@ -391,7 +391,7 @@ mod tests {
     fn list_query_params_defaults() {
         let params: ListQueryParams = serde_urlencoded::from_str("").unwrap();
         assert_eq!(params.word, None);
-        assert_eq!(params.mode, MalodyMode::Key);
+        assert_eq!(params.mode, MalodyMode::Any);
         assert_eq!(params.from, None);
     }
 

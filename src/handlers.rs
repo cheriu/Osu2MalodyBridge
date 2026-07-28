@@ -42,6 +42,21 @@ pub async fn song_promote(
     Json(services::song_promote(&state, &params).await)
 }
 
+pub async fn song_friend(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<FriendQueryParams>,
+) -> Json<PagedResponse<Song>> {
+    if let Err(code) = check_auth(&state, params.uid(), params.key(), params.api()) {
+        return Json(PagedResponse {
+            code,
+            has_more: false,
+            next: 0,
+            data: vec![],
+        });
+    }
+    Json(services::song_friend(&state, &params).await)
+}
+
 pub async fn charts_list(
     State(state): State<Arc<AppState>>,
     Query(params): Query<ChartsQueryParams>,

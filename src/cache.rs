@@ -168,3 +168,7 @@ pub fn promote_search_key(params: &crate::models::PromoteQueryParams) -> u64 {
     let mode = params.mode as i32 as u64;
     org.wrapping_mul(31).wrapping_add(mode)
 }
+
+pub fn friend_search_key(params: &crate::models::FriendQueryParams) -> u64 {
+    params.org.unwrap_or(0) as u64
+}

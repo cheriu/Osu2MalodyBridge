@@ -224,6 +224,21 @@ pub async fn song_promote(state: &AppState, params: &PromoteQueryParams) -> Page
     }
 }
 
+pub async fn song_friend(state: &AppState, params: &FriendQueryParams) -> PagedResponse<Song> {
+    match search::do_song_friend(state, params).await {
+        Ok(resp) => resp,
+        Err(e) => {
+            error!("Friend error for {:?}: {:?}", params, e);
+            PagedResponse {
+                code: -1,
+                has_more: false,
+                next: 0,
+                data: vec![],
+            }
+        }
+    }
+}
+
 pub async fn song_query(state: &AppState, params: &SongQueryParams) -> PagedResponse<Song> {
     let sid = params.sid;
     let cid = params.cid;

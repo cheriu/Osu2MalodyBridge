@@ -2,7 +2,7 @@ use rosu_v2::prelude::*;
 use tracing::info;
 
 use super::AppState;
-use crate::cache::{list_search_key, promote_search_key, SearchChain, SearchChainCache};
+use crate::cache::{list_search_key, promote_search_key, friend_search_key,SearchChain, SearchChainCache};
 use crate::models::*;
 
 /// Fetch the page containing `from` from the search chain cache,
@@ -13,7 +13,8 @@ async fn get_or_fetch_page(
     search_key: u64,
     from: i32,
     word: &str,
-    is_promote: bool,
+    spotlights: bool,
+    follows: bool,
     mode: MalodyMode,
 ) -> anyhow::Result<BeatmapsetSearchResult> {
     let game_mode = mode.to_osu_game_mode();
@@ -53,23 +54,20 @@ async fn get_or_fetch_page(
 
     // No chain — fresh search
     info!("Fresh search for target from={} (mode={:?})", from, game_mode);
-    let mut result = if is_promote {
-        state.osu_client()
-            .beatmapset_search()
-            .mode(game_mode)
-            .nsfw(false)
-            .spotlights(true)
-            .await?
-    } else {
-        let mut search = state.osu_client()
-            .beatmapset_search()
-            .mode(game_mode)
-            .nsfw(false);
-        if !word.is_empty() {
-            search = search.query(word);
-        }
-        search.await?
-    };
+    let mut search = state.osu_client()
+        .beatmapset_search()
+        .mode(game_mode)
+        .nsfw(false);
+    if spotlights {
+        search = search.spotlights(true);
+    }
+    if follows {
+        search = search.follows(true);
+    }
+    if !word.is_empty() {
+        search = search.query(word);
+    }
+    let mut result = search.await?;
 
     let chain = SearchChain::new(result.clone());
     chain_cache.put_chain(search_key, chain);
@@ -108,7 +106,7 @@ pub(super) async fn do_song_list(
     // Look up the chain for this search. The chain stores pages indexed
     // sequentially (0, 1, 2, ...). We need to find which page contains `from`.
     // Strategy: walk the chain from page 0, tracking cumulative offsets.
-    let result = get_or_fetch_page(state, &state.list_chain, search_key, from, word, false, mode).await?;
+    let result = get_or_fetch_page(state, &state.list_chain, search_key, from, word, false, false, mode).await?;
 
     let response = search_result_to_paged_songs(&result, from, org);
     Ok(response)
@@ -127,7 +125,7 @@ pub(super) async fn do_song_promote(
     let org = params.org.unwrap_or(0);
     let search_key = promote_search_key(params);
 
-    let result = get_or_fetch_page(state, &state.promote_chain, search_key, from, "", true, mode).await?;
+    let result = get_or_fetch_page(state, &state.promote_chain, search_key, from, "", true, false, mode).await?;
 
     let response = search_result_to_paged_songs(&result, from, org);
     Ok(response)
@@ -237,4 +235,22 @@ pub(super) async fn do_song_query(
         next: 0,
         data: vec![song],
     })
+}
+
+// ---------------------------------------------------------------------------
+// Internal: friend (spotlight beatmaps, same as promote)
+// ---------------------------------------------------------------------------
+
+pub(super) async fn do_song_friend(
+    state: &AppState,
+    params: &FriendQueryParams,
+) -> anyhow::Result<PagedResponse<Song>> {
+    let from = params.from.unwrap_or(0);
+    let org = params.org.unwrap_or(0);
+    let search_key = friend_search_key(params);
+
+    let result = get_or_fetch_page(state, &state.promote_chain, search_key, from, "", false, true, MalodyMode::Key).await?;
+
+    let response = search_result_to_paged_songs(&result, from, org);
+    Ok(response)
 }

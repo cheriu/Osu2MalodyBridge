@@ -155,9 +155,13 @@ pub(super) fn search_result_to_paged_songs(
         };
     }
 
-    let songs: Vec<Song> = result.mapsets.iter().map(|m| mapset_to_song(m, org)).collect();
+    let raw_len = result.mapsets.len() as i32;
+    let songs: Vec<Song> = result.mapsets.iter()
+        .filter(|m| has_supported_beatmaps(m))
+        .map(|m| mapset_to_song(m, org))
+        .collect();
     let has_more = result.has_more();
-    let next = from + songs.len() as i32;
+    let next = from + raw_len;
 
     PagedResponse {
         code: 0,
@@ -188,6 +192,7 @@ pub(super) fn mapset_to_song(mapset: &BeatmapsetExtended, org: i32) -> Song {
         .as_ref()
         .map(|maps| {
             maps.iter()
+                .filter(|b| b.mode != GameMode::Osu)
                 .map(|b| MalodyMode::from_osu_game_mode(b.mode))
                 .fold(0i32, |acc, m| acc | (1i32 << (m as i32)))
         })
@@ -205,6 +210,15 @@ pub(super) fn mapset_to_song(mapset: &BeatmapsetExtended, org: i32) -> Song {
         mode: mode_bitmask,
         time: mapset.last_updated.unix_timestamp(),
     }
+}
+
+/// Check if a mapset contains at least one non-standard beatmap.
+fn has_supported_beatmaps(mapset: &BeatmapsetExtended) -> bool {
+    mapset
+        .maps
+        .as_ref()
+        .map(|maps| maps.iter().any(|b| b.mode != GameMode::Osu))
+        .unwrap_or(false)
 }
 
 // ---------------------------------------------------------------------------

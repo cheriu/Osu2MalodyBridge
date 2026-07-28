@@ -21,7 +21,12 @@ pub(super) async fn do_charts_list(state: &AppState, sid: i32) -> anyhow::Result
     let charts: Vec<Chart> = mapset
         .maps
         .as_ref()
-        .map(|maps| maps.iter().map(beatmap_ext_to_chart).collect())
+        .map(|maps| {
+            maps.iter()
+                .filter(|b| b.mode != GameMode::Osu)
+                .map(beatmap_ext_to_chart)
+                .collect()
+        })
         .unwrap_or_default();
 
     Ok(PagedResponse {

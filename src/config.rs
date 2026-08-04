@@ -126,10 +126,13 @@ pub enum MaxOszSize {
     Unit(String),
 }
 
+/// Default `max_osz_size`: 10 GiB.
+const DEFAULT_MAX_OSZ_SIZE: u64 = 10 * 1024 * 1024 * 1024;
+
 impl Default for MaxOszSize {
-    /// Absent `max_osz_size` means unlimited (0 bytes).
+    /// Default cache cap: 10 GiB of .osz files.
     fn default() -> Self {
-        MaxOszSize::Bytes(0)
+        MaxOszSize::Bytes(DEFAULT_MAX_OSZ_SIZE)
     }
 }
 

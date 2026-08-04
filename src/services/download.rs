@@ -21,6 +21,9 @@ use crate::services::capacity;
 pub(super) async fn do_download_with_entry(
     state: &AppState,
     beatmap_entry: &BeatmapCacheEntry,
+    uid: Option<i32>,
+    key: Option<&str>,
+    api: Option<i32>,
 ) -> anyhow::Result<Vec<DownloadItem>> {
     let mapset_id = beatmap_entry.mapset_id;
 
@@ -58,13 +61,16 @@ pub(super) async fn do_download_with_entry(
     };
     let base_url = format!("{}://{}/{}", scheme, host_port, API_BASE_PATH);
 
-    build_download_items(&osz_path, beatmap_entry, &base_url)
+    build_download_items(&osz_path, beatmap_entry, &base_url, uid, key, api)
 }
 
 pub(super) fn build_download_items(
     osz_path: &Path,
     beatmap: &BeatmapCacheEntry,
     base_url: &str,
+    uid: Option<i32>,
+    key: Option<&str>,
+    api: Option<i32>,
 ) -> anyhow::Result<Vec<DownloadItem>> {
     let file = fs::File::open(osz_path)?;
     let mut archive = ZipArchive::new(file)?;
@@ -79,23 +85,47 @@ pub(super) fn build_download_items(
     let audio_hash = md5_of_zip_entry(osz_path, &audio_name)?;
     let bg_hash = md5_of_zip_entry(osz_path, &bg_name)?;
 
+    let auth = auth_suffix(uid, key, api);
+
     Ok(vec![
         DownloadItem {
             name: format!("{} R.{}.osu", beatmap.version, beatmap.stars),
             hash: beatmap.checksum.clone(),
-            file: format!("{}/{}?type=chart", base_url, beatmap.map_id),
+            file: format!("{}/{}?type=chart{}", base_url, beatmap.map_id, auth),
         },
         DownloadItem {
             name: audio_name,
             hash: audio_hash,
-            file: format!("{}/{}?type=audio", base_url, beatmap.map_id),
+            file: format!("{}/{}?type=audio{}", base_url, beatmap.map_id, auth),
         },
         DownloadItem {
             name: bg_name,
             hash: bg_hash,
-            file: format!("{}/{}?type=bg", base_url, beatmap.map_id),
+            file: format!("{}/{}?type=bg{}", base_url, beatmap.map_id, auth),
         },
     ])
+}
+
+/// Build the `&uid=..&key=..&api=..` suffix appended to file URLs so the
+/// resource endpoint can verify the requesting client (when
+/// `verify_client_auth` is enabled). Each param is included only if present;
+/// returns an empty string when nothing is set.
+fn auth_suffix(uid: Option<i32>, key: Option<&str>, api: Option<i32>) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if let Some(u) = uid {
+        parts.push(format!("uid={u}"));
+    }
+    if let Some(k) = key {
+        parts.push(format!("key={k}"));
+    }
+    if let Some(a) = api {
+        parts.push(format!("api={a}"));
+    }
+    if parts.is_empty() {
+        String::new()
+    } else {
+        format!("&{}", parts.join("&"))
+    }
 }
 
 pub(super) fn find_osu_by_checksum<R: Read + std::io::Seek>(

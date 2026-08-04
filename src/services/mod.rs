@@ -278,6 +278,9 @@ pub async fn charts_list(state: &AppState, sid: i32) -> PagedResponse<Chart> {
 pub async fn download_chart(
     state: &AppState,
     cid: i32,
+    uid: Option<i32>,
+    key: Option<&str>,
+    api: Option<i32>,
 ) -> DownloadResponse {
     let beatmap_entry = match download::get_beatmap_entry(state, cid as u32).await {
         Ok(entry) => entry,
@@ -294,7 +297,7 @@ pub async fn download_chart(
 
     let mapset_id = beatmap_entry.mapset_id;
 
-    match download::do_download_with_entry(state, &beatmap_entry).await {
+    match download::do_download_with_entry(state, &beatmap_entry, uid, key, api).await {
         Ok(items) => DownloadResponse {
             code: 0,
             items,

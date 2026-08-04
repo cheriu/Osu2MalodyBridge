@@ -84,7 +84,16 @@ pub async fn download_chart(
             cid: params.cid,
         });
     }
-    Json(services::download_chart(&state, params.cid).await)
+    Json(
+        services::download_chart(
+            &state,
+            params.cid,
+            params.uid(),
+            params.key(),
+            params.api(),
+        )
+        .await,
+    )
 }
 
 pub async fn song_query(
@@ -107,10 +116,17 @@ pub async fn send_chart_resource(
     Path(cid): Path<i32>,
     Query(params): Query<ResourceQueryParams>,
 ) -> Response {
-    // No auth check here — this endpoint serves raw files referenced by
-    // download URLs. The Malody client fetches these as plain HTTP requests
-    // without uid/key/api params. Auth is enforced on the store API endpoints
-    // that generate the download URLs.
+    // When `verify_client_auth` is enabled, enforce the same uid/key/api
+    // signature on file fetches. The download endpoint forwards its auth
+    // params into the returned file URLs so the client can replay them.
+    if let Err(code) = check_auth(&state, params.uid(), params.key(), params.api()) {
+        return (
+            StatusCode::FORBIDDEN,
+            format!("auth failed: code {code}"),
+        )
+            .into_response();
+    }
+
     match services::send_resource(&state, cid, &params.resource_type).await {
         Ok((data, filename)) => {
             let content_type = match params.resource_type.as_str() {

@@ -12,6 +12,7 @@ use super::API_BASE_PATH;
 use crate::cache::BeatmapCacheEntry;
 use crate::models::*;
 use crate::osu_parser;
+use crate::services::capacity;
 
 // ---------------------------------------------------------------------------
 // Internal: download
@@ -28,13 +29,18 @@ pub(super) async fn do_download_with_entry(
 
     if !osz_path.exists() {
         download_osz(state, mapset_id, &osz_path).await?;
+        // Evict oldest .osz files once the cache exceeds the configured size.
+        // The freshly written file has the newest mtime, so it is never evicted.
+        capacity::enforce_osz_capacity(state);
     } else {
+        capacity::touch_osz(&osz_path);
         // Validate existing .osz: stale JSON error responses from mirrors
         if let Ok(bytes) = fs::read(&osz_path) {
             if bytes.starts_with(b"{") {
                 info!("Removing stale corrupted .osz for mapset {}", mapset_id);
                 fs::remove_file(&osz_path)?;
                 download_osz(state, mapset_id, &osz_path).await?;
+                capacity::enforce_osz_capacity(state);
             }
         }
     }
@@ -145,6 +151,9 @@ pub(super) async fn do_send_resource(
     if !osz_path.exists() {
         return Err((404, "osz file not found".into()));
     }
+
+    // Keep track of recent access so the capacity manager evicts LRU first.
+    capacity::touch_osz(&osz_path);
 
     let file =
         fs::File::open(&osz_path).map_err(|e| (500, format!("Cannot open osz: {:?}", e)))?;

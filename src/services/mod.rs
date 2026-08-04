@@ -10,6 +10,7 @@ use crate::cache::{BeatmapCache, BeatmapsetCache, SearchChainCache};
 use crate::config::Config;
 use crate::models::*;
 
+mod capacity;
 mod charts;
 mod download;
 mod search;

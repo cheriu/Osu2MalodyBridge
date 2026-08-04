@@ -39,6 +39,9 @@ pub struct MalodyServerConfig {
     pub welcome: String,
     #[serde(default = "default_tmp_dir")]
     pub tmp: String,
+    /// Max total size of cached .osz files in tmp dir (bytes). 0 = unlimited.
+    #[serde(default)]
+    pub max_osz_size: MaxOszSize,
     /// When true, reject requests missing valid uid/key/api parameters.
     #[serde(default)]
     pub verify_client_auth: bool,
@@ -91,6 +94,55 @@ fn default_tmp_dir() -> String {
     "./Osu2Malody".to_string()
 }
 
+/// Parse a human-readable size into bytes: `1073741824`, `512M`, `1G`, `2TiB`.
+/// Suffixes K/M/G/T (optionally with B or iB) are 1024-based and case-insensitive.
+/// `0` and empty string mean unlimited.
+fn parse_capacity_size(s: &str) -> Option<u64> {
+    let t = s.trim();
+    if t.is_empty() || t == "0" {
+        return Some(0);
+    }
+    let (num_part, unit) = match t.find(|c: char| !(c.is_ascii_digit())) {
+        Some(i) => (&t[..i], &t[i..]),
+        None => (t, ""),
+    };
+    let bytes: u64 = num_part.trim().parse().ok()?;
+    let multiplier = match unit.trim().to_ascii_uppercase().as_str() {
+        "" | "B" => 1,
+        "K" | "KB" | "KIB" => 1 << 10,
+        "M" | "MB" | "MIB" => 1 << 20,
+        "G" | "GB" | "GIB" => 1 << 30,
+        "T" | "TB" | "TIB" => 1 << 40,
+        _ => return None,
+    };
+    bytes.checked_mul(multiplier)
+}
+
+/// Raw `max_osz_size` value from YAML: a plain byte count or a human-readable size string.
+#[derive(Deserialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum MaxOszSize {
+    Bytes(u64),
+    Unit(String),
+}
+
+impl Default for MaxOszSize {
+    /// Absent `max_osz_size` means unlimited (0 bytes).
+    fn default() -> Self {
+        MaxOszSize::Bytes(0)
+    }
+}
+
+impl MaxOszSize {
+    /// Resolve to bytes. Returns `None` if the Unit string is invalid.
+    pub fn to_bytes(&self) -> Option<u64> {
+        match self {
+            MaxOszSize::Bytes(b) => Some(*b),
+            MaxOszSize::Unit(s) => parse_capacity_size(s),
+        }
+    }
+}
+
 impl Config {
     /// Load configuration from a YAML file, with env var overrides.
     ///
@@ -124,6 +176,19 @@ impl Config {
         if let Ok(client_secret) = std::env::var("OSU_CLIENT_SECRET") {
             config.malody.osu.client_secret = Some(client_secret);
         }
+
+        let osz_size = config
+            .malody
+            .server
+            .max_osz_size
+            .to_bytes()
+            .with_context(|| {
+                format!(
+                    "invalid max_osz_size {:?}: expected e.g. 1073741824, 512M, 1G",
+                    config.malody.server.max_osz_size
+                )
+            })?;
+        config.malody.server.max_osz_size = MaxOszSize::Bytes(osz_size);
 
         config.validate()?;
         Ok(config)

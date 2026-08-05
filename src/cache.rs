@@ -146,29 +146,43 @@ impl SearchChainCache {
 }
 
 // ---------------------------------------------------------------------------
-// Cache key builders — hash search params (excluding `from`)
+// Cache key builders — hash search params (excluding `from`, `org`, `lvge`,
+// `lvle`, and `beta`)
 // ---------------------------------------------------------------------------
+//
+// `org`, `lvge`, `lvle`, and `beta` are intentionally NOT part of any key:
+// they are accepted by the API but have no effect on the actual osu! search
+// (only `word`, `mode`, `spotlights`, `follows` are translated to filters).
+// Including them would split the cache with no behavior change. `from` is
+// excluded because the chain is walked forward to locate the right page.
 
-/// Build a cache key from search parameters (without `from` offset).
+/// Tag prefix for the promote-search key. Distinct from [`FRIEND_KEY`] so the
+/// two never collide in the shared `SearchChainCache`.
+const PROMOTE_KEY: u64 = 0x_7072_6f6d_6f74_65; // ASCII "promote"
+
+/// Single fixed key for the friend-search chain. Every friend request is
+/// identical (`follows=true`, no word, no mode filter), so they always share
+/// the same chain regardless of `org` or other params.
+const FRIEND_KEY: u64 = 0x_6672_6965_6e64; // ASCII "friend"
+
+/// Build a cache key from search parameters that actually affect the result
+/// (`word` and `mode`). Params that have no effect on the search (`org`,
+/// `lvge`, `lvle`, `beta`) are excluded; `from` is excluded because
+/// pagination walks the cached chain.
 pub fn list_search_key(params: &crate::models::ListQueryParams) -> u64 {
     let mut h = 0u64;
     for b in params.word.as_deref().unwrap_or("").bytes() {
         h = h.wrapping_mul(31).wrapping_add(b as u64);
     }
-    h = h.wrapping_mul(31).wrapping_add(params.org.unwrap_or(0) as u64);
     h = h.wrapping_mul(31).wrapping_add(params.mode as i32 as u64);
-    h = h.wrapping_mul(31).wrapping_add(params.lvge.unwrap_or(0) as u64);
-    h = h.wrapping_mul(31).wrapping_add(params.lvle.unwrap_or(0) as u64);
-    h = h.wrapping_mul(31).wrapping_add(params.beta.unwrap_or(0) as u64);
     h
 }
 
 pub fn promote_search_key(params: &crate::models::PromoteQueryParams) -> u64 {
-    let org = params.org.unwrap_or(0) as u64;
     let mode = params.mode as i32 as u64;
-    org.wrapping_mul(31).wrapping_add(mode)
+    PROMOTE_KEY.wrapping_add(mode)
 }
 
-pub fn friend_search_key(params: &crate::models::FriendQueryParams) -> u64 {
-    params.org.unwrap_or(0) as u64
+pub fn friend_search_key(_params: &crate::models::FriendQueryParams) -> u64 {
+    FRIEND_KEY
 }

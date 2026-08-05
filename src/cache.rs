@@ -156,13 +156,14 @@ impl SearchChainCache {
 // Including them would split the cache with no behavior change. `from` is
 // excluded because the chain is walked forward to locate the right page.
 
-/// Tag prefix for the promote-search key. Distinct from [`FRIEND_KEY`] so the
-/// two never collide in the shared `SearchChainCache`.
+/// Tag prefix for the promote-search key. Distinct from [`FRIEND_KEY`] and
+/// from list keys so the three chains (separate `SearchChainCache` fields
+/// in `AppState`) can never collide.
 const PROMOTE_KEY: u64 = 0x_7072_6f6d_6f74_65; // ASCII "promote"
 
 /// Single fixed key for the friend-search chain. Every friend request is
-/// identical (`follows=true`, no word, no mode filter), so they always share
-/// the same chain regardless of `org` or other params.
+/// identical (`featured_artists=true`, no word, no mode filter), so they
+/// always share the same chain regardless of `org` or other params.
 const FRIEND_KEY: u64 = 0x_6672_6965_6e64; // ASCII "friend"
 
 /// Build a cache key from search parameters that actually affect the result

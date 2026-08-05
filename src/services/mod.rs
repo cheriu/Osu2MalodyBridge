@@ -27,6 +27,7 @@ pub struct AppState {
     pub beatmapset_cache: BeatmapsetCache,
     pub list_chain: SearchChainCache,
     pub promote_chain: SearchChainCache,
+    pub friend_chain: SearchChainCache,
     /// Parsed Malody RSA public key for uid/key verification.
     malody_pubkey: Option<RsaPublicKey>,
 }
@@ -52,6 +53,7 @@ impl AppState {
             beatmapset_cache: BeatmapsetCache::new(),
             list_chain: SearchChainCache::new(),
             promote_chain: SearchChainCache::new(),
+            friend_chain: SearchChainCache::new(),
             malody_pubkey,
         }
     }

@@ -36,6 +36,7 @@ pub fn dummy_state_with_config(config: Config) -> AppState {
         beatmapset_cache: BeatmapsetCache::new(),
         list_chain: SearchChainCache::new(),
         promote_chain: SearchChainCache::new(),
+        friend_chain: SearchChainCache::new(),
         malody_pubkey: None,
     }
 }
@@ -82,6 +83,7 @@ malody:
         beatmapset_cache: BeatmapsetCache::new(),
         list_chain: SearchChainCache::new(),
         promote_chain: SearchChainCache::new(),
+        friend_chain: SearchChainCache::new(),
         malody_pubkey: None,
     })
 }

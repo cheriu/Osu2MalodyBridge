@@ -14,7 +14,7 @@ async fn get_or_fetch_page(
     from: i32,
     word: &str,
     spotlights: bool,
-    follows: bool,
+    featured_artists: bool,
     mode: MalodyMode,
 ) -> anyhow::Result<BeatmapsetSearchResult> {
     // Any means no mode filter — search all modes.
@@ -67,8 +67,8 @@ async fn get_or_fetch_page(
     if spotlights {
         search = search.spotlights(true);
     }
-    if follows {
-        search = search.follows(true);
+    if featured_artists {
+        search = search.featured_artists(true);
     }
     if !word.is_empty() {
         search = search.query(word);
@@ -258,8 +258,15 @@ pub(super) async fn do_song_query(
 }
 
 // ---------------------------------------------------------------------------
-// Internal: friend (spotlight beatmaps, same as promote)
+// Internal: friend (featured-artists beatmapsets — the only "followed content"
+// section of `beatmapsets/search` that works without user OAuth)
 // ---------------------------------------------------------------------------
+//
+// osu!'s `c=follows` filter requires a Resource Owner (user OAuth). Our app
+// uses Client Credentials Grant (no user context), so `c=follows` is a no-op
+// and returns the same data as list. We use `c=featured_artists` instead,
+// which works with the `public` scope and returns a curated public set
+// distinct from list (no filter) and promote (spotlights).
 
 pub(super) async fn do_song_friend(
     state: &AppState,
@@ -269,7 +276,7 @@ pub(super) async fn do_song_friend(
     let org = params.org.unwrap_or(0);
     let search_key = friend_search_key(params);
 
-    let result = get_or_fetch_page(state, &state.promote_chain, search_key, from, "", false, true, MalodyMode::Any).await?;
+    let result = get_or_fetch_page(state, &state.friend_chain, search_key, from, "", false, true, MalodyMode::Any).await?;
 
     let response = search_result_to_paged_songs(&result, from, org);
     Ok(response)

@@ -65,6 +65,7 @@ malody:
     min: 202310                     # 最低客户端 API 版本
     welcome: "Welcome!"             # 欢迎语
     tmp: ./Osu2Malody               # .osz 缓存目录
+    max_osz_size: 10G             # .osz 缓存大小上限 (默认: 10G; 0 = 不限)。
     # verify_client_auth: false     # 是否验证客户端 uid/key 签名
     # mirror: hinamizawa            # 下载镜像: hinamizawa, catboy, osudirect
   osu:

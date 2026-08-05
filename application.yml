@@ -9,7 +9,8 @@ malody:
     min: 202310
     welcome: Welcome to this osu! to MalodyV server
     tmp: "./Osu2Malody"
-    # verify_client_auth: false
+    max_osz_size: 10G          # max total .osz cache size in tmp (default: 10G).
+    verify_client_auth: false
     mirror: hinamizawa  # download mirror: hinamizawa (default), catboy, osudirect
   osu:
     # Set via YAML or override with OSU_CLIENT_ID / OSU_CLIENT_SECRET env vars

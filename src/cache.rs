@@ -150,11 +150,12 @@ impl SearchChainCache {
 // `lvle`, and `beta`)
 // ---------------------------------------------------------------------------
 //
-// `org`, `lvge`, `lvle`, and `beta` are intentionally NOT part of any key:
-// they are accepted by the API but have no effect on the actual osu! search
-// (only `word`, `mode`, `spotlights`, `follows` are translated to filters).
-// Including them would split the cache with no behavior change. `from` is
-// excluded because the chain is walked forward to locate the right page.
+// `org` and `beta` are intentionally NOT part of any key: they have no effect
+// on the osu! search (`org` only affects title rendering). `lvge`/`lvle` are
+// folded into the query string by `build_search_query` (as `star>`/`star<`),
+// so the keyed `query` already distinguishes different level bounds without
+// separate key terms. `from` is excluded because the chain is walked forward
+// to locate the right page.
 
 /// Tag prefix for the promote-search key. Distinct from [`FRIEND_KEY`] and
 /// from list keys so the three chains (separate `SearchChainCache` fields
@@ -166,16 +167,15 @@ const PROMOTE_KEY: u64 = 0x_7072_6f6d_6f74_65; // ASCII "promote"
 /// always share the same chain regardless of `org` or other params.
 const FRIEND_KEY: u64 = 0x_6672_6965_6e64; // ASCII "friend"
 
-/// Build a cache key from search parameters that actually affect the result
-/// (`word` and `mode`). Params that have no effect on the search (`org`,
-/// `lvge`, `lvle`, `beta`) are excluded; `from` is excluded because
-/// pagination walks the cached chain.
-pub fn list_search_key(params: &crate::models::ListQueryParams) -> u64 {
+/// Build a cache key from the effective search query (word plus the
+/// `star>`/`star<` filters derived from `lvge`/`lvle`) and mode. `from` is
+/// excluded because pagination walks the cached chain.
+pub fn list_search_key(query: &str, mode: crate::models::MalodyMode) -> u64 {
     let mut h = 0u64;
-    for b in params.word.as_deref().unwrap_or("").bytes() {
+    for b in query.bytes() {
         h = h.wrapping_mul(31).wrapping_add(b as u64);
     }
-    h = h.wrapping_mul(31).wrapping_add(params.mode as i32 as u64);
+    h = h.wrapping_mul(31).wrapping_add(mode as i32 as u64);
     h
 }
 

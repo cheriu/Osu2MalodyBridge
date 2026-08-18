@@ -107,15 +107,54 @@ pub(super) async fn do_song_list(
     let from = params.from.unwrap_or(0);
     let org = params.org.unwrap_or(0);
     let word = params.word.as_deref().unwrap_or("");
-    let search_key = list_search_key(params);
+
+    // Malody lvge/lvle map to osu! search filters `star>`/`star<` appended to
+    // the word query (https://osu.ppy.sh/wiki/en/Beatmap_search).
+    let query = build_search_query(word, params.lvge, params.lvle);
+    // The cache key hashes the effective query (word + star filters), so
+    // different lvge/lvle bounds naturally produce different keys.
+    let search_key = list_search_key(&query, mode);
 
     // Look up the chain for this search. The chain stores pages indexed
     // sequentially (0, 1, 2, ...). We need to find which page contains `from`.
     // Strategy: walk the chain from page 0, tracking cumulative offsets.
-    let result = get_or_fetch_page(state, &state.list_chain, search_key, from, word, false, false, mode).await?;
+    let result = get_or_fetch_page(state, &state.list_chain, search_key, from, &query, false, false, mode).await?;
 
     let response = search_result_to_paged_songs(&result, from, org);
     Ok(response)
+}
+
+/// Build the osu! search query from the Malody `word` plus optional
+/// `lvge`/`lvle` level bounds. `lvge`/`lvle` become `star>`/`star<` filters.
+/// A bound of 0 (the spec default, meaning "no bound") appends nothing.
+fn build_search_query(word: &str, lvge: Option<i32>, lvle: Option<i32>) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if !word.is_empty() {
+        parts.push(word.to_string());
+    }
+    if let Some(lv) = lvge.filter(|&v| v > 0) {
+        parts.push(format!("star>{}", level_to_star_rating(lv)));
+    }
+    if let Some(lv) = lvle.filter(|&v| v > 0) {
+        parts.push(format!("star<{}", level_to_star_rating(lv)));
+    }
+    parts.join(" ")
+}
+
+/// Convert a Malody integer level to an osu! star-rating string. Malody
+/// levels are integers while osu! ratings are floats; the first digit is the
+/// integer part and the remaining digits the decimal part:
+/// `5 → "5"`, `54 → "5.4"`, `542 → "5.42"`.
+fn level_to_star_rating(level: i32) -> String {
+    let s = level.to_string();
+    let mut chars = s.chars();
+    let int_part = chars.next().unwrap_or('0');
+    let rest: String = chars.collect();
+    if rest.is_empty() {
+        int_part.to_string()
+    } else {
+        format!("{}.{}", int_part, rest)
+    }
 }
 
 // ---------------------------------------------------------------------------

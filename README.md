@@ -69,6 +69,7 @@ malody:
     max_osz_size: 10G             # max .osz cache size (default: 10G; 0 = unlimited).
     # verify_client_auth: false     # verify client uid/key signature
     # mirror: hinamizawa            # download mirror: hinamizawa, catboy, osudirect
+    # chart_match: md5             # locate .osu in cached .osz: md5 (default) | beatmap_id
   osu:
     clientID:                       # osu! OAuth Client ID
     clientSecret:                   # osu! OAuth Client Secret

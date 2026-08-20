@@ -82,6 +82,37 @@ pub fn parse_audio_and_background(osu_content: &str) -> (Option<String>, Option<
     (audio, background)
 }
 
+/// Parse a .osu file to extract the beatmap ID from the [Metadata] section.
+/// Returns `None` when the ID is absent or not a positive number (old files
+/// often carry `BeatmapID: 0`).
+pub fn parse_beatmap_id(osu_content: &str) -> Option<i32> {
+    let mut in_metadata = false;
+    for line in osu_content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with("//") {
+            continue;
+        }
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            let section = &trimmed[1..trimmed.len() - 1];
+            in_metadata = section == "Metadata";
+            continue;
+        }
+        if in_metadata {
+            if let Some((key, value)) = trimmed.split_once(':') {
+                if key.trim() == "BeatmapID" {
+                    let id: i32 = value.trim().parse().ok()?;
+                    if id > 0 {
+                        return Some(id);
+                    }
+                    return None;
+                }
+            }
+        }
+    }
+
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

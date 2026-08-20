@@ -48,6 +48,9 @@ pub struct MalodyServerConfig {
     /// Beatmap download mirror.
     #[serde(default)]
     pub mirror: DownloadMirror,
+    /// How to locate the .osu chart file inside a cached .osz.
+    #[serde(default)]
+    pub chart_match: ChartMatch,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -80,6 +83,20 @@ impl DownloadMirror {
             Self::OsuDirect => format!("https://osu.direct/api/d/{mapset_id}"),
         }
     }
+}
+
+/// How to locate the .osu chart file inside a cached .osz.
+#[derive(Deserialize, Clone, Debug, Default)]
+pub enum ChartMatch {
+    /// md5 of the .osu content equals the osu! API checksum (official default).
+    #[serde(rename = "md5")]
+    #[default]
+    Md5,
+    /// Parse the `BeatmapID` from the .osu `[Metadata]` section and match the
+    /// beatmap id (cid). Useful when mirror-served .osu content differs from
+    /// the checksum the osu! API reports.
+    #[serde(rename = "beatmap_id")]
+    BeatmapId,
 }
 
 fn default_port() -> u16 {

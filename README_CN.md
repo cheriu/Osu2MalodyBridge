@@ -68,6 +68,7 @@ malody:
     max_osz_size: 10G             # .osz 缓存大小上限 (默认: 10G; 0 = 不限)。
     # verify_client_auth: false     # 是否验证客户端 uid/key 签名
     # mirror: hinamizawa            # 下载镜像: hinamizawa, catboy, osudirect
+    # chart_match: md5             # 在缓存的 .osz 中定位 .osu 的方式: md5 (默认) | beatmap_id
   osu:
     clientID:                       # osu! OAuth Client ID
     clientSecret:                   # osu! OAuth Client Secret

@@ -10,6 +10,7 @@ use zip::ZipArchive;
 use super::AppState;
 use super::API_BASE_PATH;
 use crate::cache::BeatmapCacheEntry;
+use crate::config::ChartMatch;
 use crate::models::*;
 use crate::osu_parser;
 use crate::services::capacity;
@@ -61,7 +62,15 @@ pub(super) async fn do_download_with_entry(
     };
     let base_url = format!("{}://{}/{}", scheme, host_port, API_BASE_PATH);
 
-    build_download_items(&osz_path, beatmap_entry, &base_url, uid, key, api)
+    build_download_items(
+        &osz_path,
+        beatmap_entry,
+        &base_url,
+        uid,
+        key,
+        api,
+        &state.config.malody.server.chart_match,
+    )
 }
 
 pub(super) fn build_download_items(
@@ -71,11 +80,12 @@ pub(super) fn build_download_items(
     uid: Option<i32>,
     key: Option<&str>,
     api: Option<i32>,
+    mode: &ChartMatch,
 ) -> anyhow::Result<Vec<DownloadItem>> {
     let file = fs::File::open(osz_path)?;
     let mut archive = ZipArchive::new(file)?;
 
-    let osu_content = find_osu_by_checksum(&mut archive, &beatmap.checksum)?;
+    let osu_content = find_osu_chart(&mut archive, beatmap, mode)?;
     let osu_str = String::from_utf8_lossy(&osu_content);
 
     let (audio_name, bg_name) = osu_parser::parse_audio_and_background(&osu_str);
@@ -147,6 +157,38 @@ pub(super) fn find_osu_by_checksum<R: Read + std::io::Seek>(
     anyhow::bail!("No .osu file matching checksum {}", target_checksum)
 }
 
+/// Locate the .osu file whose `[Metadata] BeatmapID` equals `target_map_id`.
+pub(super) fn find_osu_by_beatmap_id<R: Read + std::io::Seek>(
+    archive: &mut ZipArchive<R>,
+    target_map_id: u32,
+) -> anyhow::Result<Vec<u8>> {
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i)?;
+        let name = entry.name().to_lowercase();
+        if name.ends_with(".osu") && !entry.is_dir() {
+            let mut buf = Vec::new();
+            entry.read_to_end(&mut buf)?;
+            let content = String::from_utf8_lossy(&buf);
+            if osu_parser::parse_beatmap_id(&content) == Some(target_map_id as i32) {
+                return Ok(buf);
+            }
+        }
+    }
+    anyhow::bail!("No .osu file with BeatmapID {} in archive", target_map_id)
+}
+
+/// Locate the .osu chart file for `beatmap`, using the configured match mode.
+pub(super) fn find_osu_chart<R: Read + std::io::Seek>(
+    archive: &mut ZipArchive<R>,
+    beatmap: &BeatmapCacheEntry,
+    mode: &ChartMatch,
+) -> anyhow::Result<Vec<u8>> {
+    match mode {
+        ChartMatch::Md5 => find_osu_by_checksum(archive, &beatmap.checksum),
+        ChartMatch::BeatmapId => find_osu_by_beatmap_id(archive, beatmap.map_id),
+    }
+}
+
 pub(super) fn md5_of_zip_entry(zip_path: &Path, target_name: &str) -> anyhow::Result<String> {
     let file = fs::File::open(zip_path)?;
     let mut archive = ZipArchive::new(file)?;
@@ -190,7 +232,7 @@ pub(super) async fn do_send_resource(
     let mut archive =
         ZipArchive::new(file).map_err(|e| (500, format!("Cannot read zip: {:?}", e)))?;
 
-    let osu_content = find_osu_by_checksum(&mut archive, &beatmap_entry.checksum)
+    let osu_content = find_osu_chart(&mut archive, &beatmap_entry, &state.config.malody.server.chart_match)
         .map_err(|e| (404, format!("Chart file not found: {:?}", e)))?;
 
     match resource_type {

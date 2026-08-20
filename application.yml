@@ -12,6 +12,7 @@ malody:
     max_osz_size: 10G          # max total .osz cache size in tmp (default: 10G).
     verify_client_auth: false
     mirror: hinamizawa  # download mirror: hinamizawa (default), catboy, osudirect
+    chart_match: beatmap_id  # how to locate the .osu chart in a cached .osz: md5 (default) | beatmap_id
   osu:
     # Set via YAML or override with OSU_CLIENT_ID / OSU_CLIENT_SECRET env vars
     clientID: 

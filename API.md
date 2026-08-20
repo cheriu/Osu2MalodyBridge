@@ -1,6 +1,4 @@
 # Malody Store API
-**Version: 202310**
-**Last Modify: 2023/10/10**
 
 ## Common
 
@@ -41,7 +39,7 @@
 **Purpose**: The client send this request to server immediately after player enter the server host. The server host is not available until the request returns successful and the server API version is compatible with the client API version.
 
 > [!NOTE]
-> full implemented
+> fully implemented.
 
 **API**: GET /api/store/info
 
@@ -68,9 +66,12 @@ among them:
 **Purpose**: Get a list of charts under the specified query conditions
 
 > [!CAUTION]
-> partial implemented
+> partially implemented
+> 
 > `word`, `org`, `mode`, `from` are supported
+> 
 > `lvge`, `lvle` are supported by appending `star>{lvge}` and `star<{lvle}` if provided
+> 
 > `beta` is ignored
 
 
